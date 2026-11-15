@@ -86,3 +86,18 @@ button.principal:disabled { opacity: 0.6; }
   .masquer-mobile { display: none; }
   .total strong { font-size: 1.3rem; }
 }
+
+/* Import */
+.bilan { margin: 8px 0 0; padding-left: 18px; line-height: 1.7; }
+.attention { color: #b8860b; }
+@media (prefers-color-scheme: dark) { .attention { color: #f0c05a; } }
+label.case { display: flex; align-items: center; gap: 8px; color: var(--texte); }
+tr.exclue td { opacity: 0.4; }
+tr.statut-confirmer td:first-child { box-shadow: inset 3px 0 0 #e0a800; }
+tr.statut-aclasser td:first-child { box-shadow: inset 3px 0 0 var(--negatif); }
+tr.statut-corrige td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+td.poste select { width: 100%; min-width: 180px; }
+button.lien.petit { font-size: 0.8rem; padding: 0; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; }
+input[type="file"] { margin-top: 8px; }
+select.manquant { border: 2px solid var(--negatif); background: color-mix(in srgb, var(--negatif) 10%, var(--fond)); }

@@ -4,8 +4,9 @@ import { supabase } from "./lib/supabase";
 import Connexion from "./pages/Connexion";
 import Synthese from "./pages/Synthese";
 import Operations from "./pages/Operations";
+import Import from "./pages/Import";
 
-type Onglet = "synthese" | "operations";
+type Onglet = "synthese" | "operations" | "import";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -45,6 +46,9 @@ export default function App() {
           <button className={onglet === "operations" ? "actif" : ""} onClick={() => setOnglet("operations")}>
             Opérations
           </button>
+          <button className={onglet === "import" ? "actif" : ""} onClick={() => setOnglet("import")}>
+            Importer
+          </button>
         </nav>
         <button className="lien" onClick={() => supabase.auth.signOut()}>
           Se déconnecter
@@ -63,6 +67,7 @@ export default function App() {
           />
         )}
         {membre && onglet === "operations" && <Operations compteInitial={compteChoisi} />}
+        {membre && onglet === "import" && <Import />}
       </main>
     </div>
   );

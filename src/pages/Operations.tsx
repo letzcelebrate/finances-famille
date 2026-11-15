@@ -146,7 +146,7 @@ export default function Operations({ compteInitial }: { compteInitial: number | 
                   <td className="libelle">{o.libelle}</td>
                   <td className="masquer-mobile">{o.banque} — {o.compte_nom}</td>
                   <td>
-                    {o.poste_nom ?? <em>à classer</em>}
+                    {o.poste_nom ?? <em className="negatif">à classer</em>}
                     {o.categorie_nom && <div className="sous">{o.categorie_nom}</div>}
                   </td>
                   <td className={`droite nowrap ${o.montant < 0 ? "negatif" : "positif"}`}>
