@@ -147,3 +147,12 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Données financières personnelles : ne jamais versionner
+*.xls
+*.xlsx
+*.xlsm
+*.xlsb
+*.ods
+*.csv
+.tmp_*
