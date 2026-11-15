@@ -88,11 +88,46 @@ export async function memoriserIdentifiant(compteId: number, identifiant: string
   if (error) throw new Error(error.message);
 }
 
-export async function ajouterRegle(motif: string, posteId: number, aConfirmer: boolean) {
+/** posteId vide : règle « ne jamais deviner ». */
+export async function ajouterRegle(motif: string, posteId: number | null, aConfirmer: boolean) {
   const { error } = await supabase
     .from("regles_classement")
-    .insert({ motif: motif.trim(), poste_id: posteId, a_confirmer: aConfirmer });
+    .insert({ motif: motif.trim(), poste_id: posteId, a_confirmer: posteId === null ? true : aConfirmer });
   if (error) throw new Error(error.message);
+}
+
+export type Ventilation = { poste_id: number; montant: number; note: string };
+
+/** Change le poste et/ou la note d'une opération existante (supprime une éventuelle division). */
+export async function modifierOperation(id: number, posteId: number | null, note: string) {
+  const { error: e1 } = await supabase.rpc("diviser_operation", { p_operation_id: id, p_lignes: [] });
+  if (e1) throw new Error(e1.message);
+  const { error } = await supabase.from("operations").update({ poste_id: posteId, note: note.trim() || null }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/** Divise une opération existante en plusieurs postes (le total doit tomber juste). */
+export async function diviserOperation(id: number, lignes: Ventilation[], note: string) {
+  const { error } = await supabase.rpc("diviser_operation", { p_operation_id: id, p_lignes: lignes });
+  if (error) throw new Error(error.message);
+  const { error: e2 } = await supabase.from("operations").update({ note: note.trim() || null }).eq("id", id);
+  if (e2) throw new Error(e2.message);
+}
+
+/** Opérations non divisées dont le libellé commence par le texte donné (pour corriger tout un tiers). */
+export async function operationsDuTiers(debutLibelle: string) {
+  const motif = debutLibelle.trim().replace(/[%_\\]/g, "");
+  if (motif.length < 3) return [];
+  return toutLire<{ id: number; poste_id: number | null; ventilations: unknown[] }>(() =>
+    supabase.from("v_operations").select("id, poste_id, ventilations").ilike("libelle", `${motif}%`).order("id"),
+  ).then((ops) => ops.filter((o) => o.ventilations.length === 0));
+}
+
+export async function reclasser(ids: number[], posteId: number) {
+  for (let i = 0; i < ids.length; i += 200) {
+    const { error } = await supabase.from("operations").update({ poste_id: posteId }).in("id", ids.slice(i, i + 200));
+    if (error) throw new Error(error.message);
+  }
 }
 
 export type LigneAImporter = {
@@ -102,6 +137,8 @@ export type LigneAImporter = {
   devise: string;
   titulaire: string;
   poste_id: number | null;
+  note: string;
+  ventilations: Ventilation[];
   empreinte: string;
 };
 

@@ -19,7 +19,8 @@ import { normaliser } from "./empreinte";
 
 export type Historique = { libelle: string; montant: number; date_operation: string; poste_id: number | null };
 
-export type Regle = { motif: string; poste_id: number; a_confirmer: boolean };
+/** poste_id vide : « ne jamais deviner », la ligne reste à classer (ex. AMAZON). */
+export type Regle = { motif: string; poste_id: number | null; a_confirmer: boolean };
 
 export type Proposition = {
   poste_id: number | null;
@@ -112,6 +113,9 @@ export function preparerClassement(historique: Historique[], regles: Regle[] = [
   return function proposer(libelle: string): Proposition {
     const lib = normaliser(libelle);
     const regle = reglesNorm.find((r) => lib.includes(r.motifNorm));
+    if (regle && regle.poste_id === null) {
+      return { poste_id: null, certitude: "aucune", raison: `toujours à vérifier (règle « ${regle.motif} »)` };
+    }
     if (regle) {
       return {
         poste_id: regle.poste_id,

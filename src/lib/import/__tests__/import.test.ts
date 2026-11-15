@@ -81,6 +81,10 @@ describe("classement automatique", () => {
     expect(proposer("CCSS, Référence: 170 2026-10-16, autre").poste_id).toBe(5);
     expect(proposer("CCSS, Référence: 160 2026-10-16, autre").poste_id).toBe(6);
   });
+  it("règle sans poste : ne jamais deviner, même si l'historique connaît le tiers", () => {
+    const proposer = preparerClassement([h("AMZN Mktp DE*1", 2), h("AMZN Mktp DE*2", 2)], [{ motif: "AMZN", poste_id: null, a_confirmer: true }]);
+    expect(proposer("AMZN Mktp DE*NU9OS5F04-LUXEMBOURG")).toMatchObject({ poste_id: null, certitude: "aucune" });
+  });
   it("tiers inconnu : à classer", () => {
     expect(preparerClassement([h("CCSS, x", 5)])("ZZZ INCONNU, 1")).toMatchObject({ poste_id: null, certitude: "aucune" });
   });

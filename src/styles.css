@@ -101,3 +101,22 @@ button.lien.petit { font-size: 0.8rem; padding: 0; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; }
 input[type="file"] { margin-top: 8px; }
 select.manquant { border: 2px solid var(--negatif); background: color-mix(in srgb, var(--negatif) 10%, var(--fond)); }
+
+/* Notes, division, édition */
+input.note { margin-top: 6px; width: 100%; font-size: 0.85rem; padding: 6px 8px; }
+.note-affichee { font-size: 0.85rem; color: var(--discret); margin-top: 3px; font-style: italic; }
+.part-affichee { font-size: 0.9rem; }
+.division { display: grid; gap: 6px; }
+.division .part { display: grid; grid-template-columns: minmax(150px, 2fr) 90px minmax(100px, 2fr) auto; gap: 6px; align-items: center; }
+.division input.montant { text-align: right; }
+.division input.manquant { border: 2px solid var(--negatif); }
+.part-pied { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 0.85rem; }
+tr.ouverte td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+tr.edition td { background: var(--fond); }
+.editeur { display: grid; gap: 12px; padding: 6px 4px; max-width: 760px; }
+.ligne-poste { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ligne-poste select { min-width: 220px; }
+.tiers { border-left: 3px solid var(--accent); padding-left: 10px; display: grid; gap: 6px; }
+@media (max-width: 640px) {
+  .division .part { grid-template-columns: 1fr 90px; }
+}

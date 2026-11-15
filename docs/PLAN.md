@@ -80,12 +80,14 @@ l'application pourra donc reconnaître le compte toute seule.
 - [x] **Étape 3** — Reprise de l'historique : charger les ~22 000 opérations et
   les paramètres depuis le classeur Excel, puis vérifier que les soldes sont
   identiques à ceux d'Excel.
-- [ ] **Étape 4** — Import des CSV Raiffeisen (compte courant + 2 cartes Visa) :
+- [x] **Étape 4** — Import des CSV Raiffeisen (compte courant + 2 cartes Visa) :
   reconnaissance du compte, écart des doublons, proposition de classement,
   écran de validation.
 - [ ] **Étape 5** — Écrans d'analyse : synthèse des soldes, bilans par mois et
   par année, objectifs.
 - [ ] **Étape 6** — Mise en ligne sur Netlify avec connexion obligatoire.
+  En cours : site Netlify privé (équipe « Famille Giraud », compte familial),
+  mis à jour à la main en glissant le dossier `dist` dans l'onglet Deploys.
 
 ## Questions ouvertes
 
@@ -105,6 +107,17 @@ l'application pourra donc reconnaître le compte toute seule.
   un par un à partir de leur description ; des doublons de libellé restent
   possibles (à fusionner plus tard si besoin).
 - Programmes de reprise : `scripts/reprise/` (les données restent hors du dépôt).
+
+- Import : compte reconnu par l'IBAN ou le numéro de carte masqué ;
+  opérations déjà présentes ignorées (y compris celles dont le libellé Excel
+  avait été complété d'une note) ; une ligne sans poste bloque l'import.
+- Classement proposé : règles des membres d'abord (ex. HESPERANGE → Garde
+  d'enfants, à confirmer ; AMAZON / AMZN → toujours à classer), puis historique.
+- Les notes sont séparées du libellé de la banque (le libellé n'est jamais
+  modifié, pour garder la détection des doublons).
+- Une opération peut être divisée en plusieurs postes ; le total doit tomber
+  juste (contrôlé par la base). Les bilans comptent chaque part dans son poste
+  (vue `v_lignes_analyse`).
 
 ## Règles de travail
 
