@@ -75,9 +75,9 @@ l'application pourra donc reconnaître le compte toute seule.
 - [x] **Étape 0** — Protéger le dépôt : les fichiers tableur et CSV ne peuvent
   pas être enregistrés dans Git.
 - [x] **Étape 1** — Comprendre l'existant (ce document).
-- [ ] **Étape 2** — Base de données Supabase : comptes, postes et catégories,
+- [x] **Étape 2** — Base de données Supabase : comptes, postes et catégories,
   opérations, historique des imports ; accès réservé aux personnes autorisées.
-- [ ] **Étape 3** — Reprise de l'historique : charger les ~22 000 opérations et
+- [x] **Étape 3** — Reprise de l'historique : charger les ~22 000 opérations et
   les paramètres depuis le classeur Excel, puis vérifier que les soldes sont
   identiques à ceux d'Excel.
 - [ ] **Étape 4** — Import des CSV Raiffeisen (compte courant + 2 cartes Visa) :
@@ -89,10 +89,22 @@ l'application pourra donc reconnaître le compte toute seule.
 
 ## Questions ouvertes
 
-- Qui doit avoir accès à l'application (moi seule, ou aussi MG) ?
 - Classement automatique : proposer un poste à partir des opérations passées
   ayant un libellé similaire ? (à confirmer à l'étape 4)
 - Faut-il garder toutes les analyses, ou certaines ne servent plus ?
+
+## Décisions prises
+
+- Accès : Sandrine et Marc uniquement. Un seul compte créé pour l'instant
+  (ajout de Marc : issue #1). Inscriptions publiques désactivées.
+- Reprise : 21 858 opérations, 54 comptes (dont 10 ouverts), 84 postes,
+  16 catégories. Soldes identiques à la Synthèse Excel au centime près.
+- Chaque opération garde sa date réelle et son mois de rattachement (celui des
+  bilans Excel), ainsi que son titulaire (Joint / Perso SA / Perso MG).
+- Les comptes fermés regroupés sous « Compte Fermé » dans Excel sont recréés
+  un par un à partir de leur description ; des doublons de libellé restent
+  possibles (à fusionner plus tard si besoin).
+- Programmes de reprise : `scripts/reprise/` (les données restent hors du dépôt).
 
 ## Règles de travail
 
