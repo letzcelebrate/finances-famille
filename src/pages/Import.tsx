@@ -181,7 +181,7 @@ export default function Import() {
       {etat === "choix" && (
         <div className="carte">
           <h2>Importer un relevé</h2>
-          <p className="sous">Fichier CSV téléchargé depuis Raiffeisen (compte courant), sans l'ouvrir dans Excel.</p>
+          <p className="sous">Fichier CSV téléchargé depuis Raiffeisen (compte courant ou relevé de carte Visa), sans l'ouvrir dans Excel.</p>
           <input type="file" accept=".csv,text/csv" onChange={(e) => e.target.files?.[0] && analyser(e.target.files[0])} />
         </div>
       )}
@@ -226,6 +226,19 @@ export default function Import() {
             <h2>{analyse.compte.banque} — {analyse.compte.nom}</h2>
             <p className="sous">{analyse.nomFichier}</p>
             <ul className="bilan">
+              {analyse.fichier.periode && (() => {
+                const p = analyse.fichier.periode;
+                const somme = Math.round(analyse.fichier.lignes.reduce((t, l) => t + l.montant, 0) * 100) / 100;
+                return (
+                  <li>
+                    Relevé du {formatDate(p.debut)} au {formatDate(p.fin)} (prélevé le {formatDate(p.prelevement)}) :{" "}
+                    <strong>{formatMontant(p.total)}</strong>
+                    {somme === p.total
+                      ? <span className="positif"> — identique à la somme des lignes ✓</span>
+                      : <span className="negatif"> — la somme des lignes donne {formatMontant(somme)} : fichier incomplet ?</span>}
+                  </li>
+                );
+              })()}
               <li>{analyse.fichier.lignes.length} lignes dans le fichier</li>
               <li>{analyse.dejaPresentes} déjà présentes (ignorées)</li>
               <li><strong>{lignes.length} nouvelles</strong>{lignes.length > 0 && <> — total {formatMontant(total)}</>}</li>

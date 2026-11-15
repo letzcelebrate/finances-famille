@@ -25,6 +25,27 @@ describe("lecture du CSV Raiffeisen", () => {
   });
 });
 
+const CARTE = "\uFEFFMouvements de la carte;;;;;;;;;;;;,,,\nNumero;4940XXXXXXXX0000;;;;;;;;;;;\n" +
+  "Début de période;Fin de période;Date de prélèvement;Montant total de la période;Devise;Date d'opération;Référence;Pays contrepartie;Montant en EUR;Montant d'origine;Devise d'origine;Montant commission;Devise commission\n" +
+  "25/10/2026;21/11/2026;03/12/2026;-35,50;EUR;11/11/2026;PAYPAL *CLUB-LUXEMBOURG;LUXEMBOURG;-25,00;-25,00;EUR;;\n" +
+  "25/10/2026;21/11/2026;03/12/2026;;;09/11/2026;\"SHOP; LONDON\";UNITED KINGDOM;-10,50;-9,00;GBP;;,,,\n";
+
+describe("lecture du CSV carte Raiffeisen", () => {
+  it("lit le numéro, la période, les lignes (virgules parasites tolérées)", () => {
+    const f = lireCsvRaiffeisen(CARTE);
+    expect(f.format).toBe("raiffeisen_carte");
+    expect(f.identifiant).toBe("4940XXXXXXXX0000");
+    expect(f.periode).toEqual({ debut: "2026-10-25", fin: "2026-11-21", prelevement: "2026-12-03", total: -35.5 });
+    expect(f.lignes).toEqual([
+      { date_operation: "2026-11-11", libelle: "PAYPAL *CLUB-LUXEMBOURG", montant: -25, devise: "EUR", type_mouvement: "LUXEMBOURG" },
+      { date_operation: "2026-11-09", libelle: "SHOP; LONDON", montant: -10.5, devise: "EUR", type_mouvement: "UNITED KINGDOM · -9,00 GBP" },
+    ]);
+  });
+  it("refuse une ligne avec commission (cas non prévu)", () => {
+    expect(() => lireCsvRaiffeisen(CARTE.replace("-25,00;EUR;;", "-25,00;EUR;1,20;EUR"))).toThrow(/commission/);
+  });
+});
+
 describe("empreinte", () => {
   it("est identique à celle calculée en Python lors de la reprise (accents compris)", () => {
     // hashlib.md5("2026-08-14|RÉFÉRENCE|-44.00".encode()).hexdigest()
@@ -40,6 +61,12 @@ describe("repérage des opérations déjà présentes", () => {
     const { presentes, nouvelles } = separerNouvelles(fichier, base);
     expect(presentes).toHaveLength(2);
     expect(nouvelles).toEqual([op("2026-09-15", "CAFE", -2)]);
+  });
+  it("reconnaît une opération dont le libellé a été complété d'une note dans Excel", () => {
+    const base = [op("2026-08-28", "La Rusticana-Luxembourg (pizza anniv)", -88.6)];
+    const { presentes, nouvelles } = separerNouvelles([op("2026-08-28", "La Rusticana-LUXEMBOURG", -88.6), op("2026-08-28", "La Rusticana-LUXEMBOURG", -88.6)], base);
+    expect(presentes).toHaveLength(1);
+    expect(nouvelles).toHaveLength(1);
   });
 });
 

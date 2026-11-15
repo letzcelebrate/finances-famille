@@ -13,41 +13,56 @@ export function empreinte(dateIso: string, libelle: string, montant: number): st
   return SparkMD5.hash(`${dateIso}|${normaliser(libelle)}|${montant.toFixed(2)}`);
 }
 
-/**
- * Clé de comparaison pour repérer les opérations déjà présentes :
- * date + montant + libellé sans aucun espace ni casse. Plus tolérante que
- * l'empreinte (les anciens fichiers Excel ont parfois perdu un espace).
- */
-export function cleComparaison(dateIso: string, libelle: string, montant: number): string {
-  return `${dateIso}|${(libelle ?? "").replace(/\s+/g, "").toUpperCase()}|${montant.toFixed(2)}`;
-}
-
 type Op = { date_operation: string; libelle: string; montant: number };
+
+const compact = (libelle: string) => (libelle ?? "").replace(/\s+/g, "").toUpperCase();
 
 /**
  * Sépare les lignes d'un fichier en « déjà présentes » et « nouvelles ».
+ * Une opération est déjà présente si la base contient une opération de même
+ * date et même montant dont le libellé est identique (espaces et majuscules
+ * ignorés) ou commence par le libellé du fichier : dans Excel, des notes
+ * étaient parfois ajoutées à la fin du libellé, ex. « La Rusticana (pizza) ».
  * Comptage exact : si la base contient 1 opération identique et le fichier 2,
  * une seule est considérée comme déjà présente, l'autre est nouvelle.
  */
 export function separerNouvelles<T extends Op>(fichier: T[], existantes: Op[]): { presentes: T[]; nouvelles: T[] } {
-  const stock = new Map<string, number>();
+  // libellés disponibles par (date, montant) ; chacun ne peut servir qu'une fois
+  const stock = new Map<string, string[]>();
   for (const e of existantes) {
-    const k = cleComparaison(e.date_operation, e.libelle, Number(e.montant));
-    stock.set(k, (stock.get(k) ?? 0) + 1);
+    const k = `${e.date_operation}|${Number(e.montant).toFixed(2)}`;
+    stock.set(k, [...(stock.get(k) ?? []), compact(e.libelle)]);
   }
   const presentes: T[] = [];
   const nouvelles: T[] = [];
+  const aRevoir: T[] = [];
+  // 1er passage : libellés identiques
   for (const l of fichier) {
-    const k = cleComparaison(l.date_operation, l.libelle, l.montant);
-    const n = stock.get(k) ?? 0;
-    if (n > 0) {
-      stock.set(k, n - 1);
+    const dispo = stock.get(`${l.date_operation}|${l.montant.toFixed(2)}`) ?? [];
+    const i = dispo.indexOf(compact(l.libelle));
+    if (i >= 0) {
+      dispo.splice(i, 1);
+      presentes.push(l);
+    } else {
+      aRevoir.push(l);
+    }
+  }
+  // 2e passage : libellé de la base complété par une note
+  for (const l of aRevoir) {
+    const dispo = stock.get(`${l.date_operation}|${l.montant.toFixed(2)}`) ?? [];
+    const c = compact(l.libelle);
+    const i = c.length >= 3 ? dispo.findIndex((d) => d.startsWith(c)) : -1;
+    if (i >= 0) {
+      dispo.splice(i, 1);
       presentes.push(l);
     } else {
       nouvelles.push(l);
     }
   }
-  return { presentes, nouvelles };
+  // garder l'ordre du fichier
+  const ordre = new Map(fichier.map((l, i) => [l, i]));
+  const tri = (a: T, b: T) => ordre.get(a)! - ordre.get(b)!;
+  return { presentes: presentes.sort(tri), nouvelles: nouvelles.sort(tri) };
 }
 
 /**
