@@ -5,8 +5,9 @@ import Connexion from "./pages/Connexion";
 import Synthese from "./pages/Synthese";
 import Operations from "./pages/Operations";
 import Import from "./pages/Import";
+import BilanMois from "./pages/BilanMois";
 
-type Onglet = "synthese" | "operations" | "import";
+type Onglet = "synthese" | "operations" | "bilan-mois" | "import";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -36,7 +37,7 @@ export default function App() {
   if (!session) return <Connexion />;
 
   return (
-    <div className="app">
+    <div className={onglet === "bilan-mois" ? "app large" : "app"}>
       <header className="entete">
         <h1>Finances Famille</h1>
         <nav className="onglets">
@@ -45,6 +46,9 @@ export default function App() {
           </button>
           <button className={onglet === "operations" ? "actif" : ""} onClick={() => setOnglet("operations")}>
             Opérations
+          </button>
+          <button className={onglet === "bilan-mois" ? "actif" : ""} onClick={() => setOnglet("bilan-mois")}>
+            Bilan par mois
           </button>
           <button className={onglet === "import" ? "actif" : ""} onClick={() => setOnglet("import")}>
             Importer
@@ -67,6 +71,7 @@ export default function App() {
           />
         )}
         {membre && onglet === "operations" && <Operations compteInitial={compteChoisi} />}
+        {membre && onglet === "bilan-mois" && <BilanMois />}
         {membre && onglet === "import" && <Import />}
       </main>
     </div>

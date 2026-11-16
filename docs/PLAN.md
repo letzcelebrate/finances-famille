@@ -85,6 +85,9 @@ l'application pourra donc reconnaître le compte toute seule.
   écran de validation.
 - [ ] **Étape 5** — Écrans d'analyse : synthèse des soldes, bilans par mois et
   par année, objectifs.
+  - [x] Bilan par mois (fonction `bilan_par_mois`, écran « Bilan par mois »).
+  - [ ] Bilan par années.
+  - [ ] Objectifs / prévisionnel.
 - [ ] **Étape 6** — Mise en ligne sur Netlify avec connexion obligatoire.
   En cours : site Netlify privé (équipe « Famille Giraud », compte familial),
   mis à jour à la main en glissant le dossier `dist` dans l'onglet Deploys.
@@ -118,6 +121,16 @@ l'application pourra donc reconnaître le compte toute seule.
 - Une opération peut être divisée en plusieurs postes ; le total doit tomber
   juste (contrôlé par la base). Les bilans comptent chaque part dans son poste
   (vue `v_lignes_analyse`).
+
+- Bilan par mois : mois de rattachement ; une ligne par poste, sous-total par
+  catégorie ; moyenne mensuelle = total ÷ 12 pour une année passée, ÷ nombre de
+  mois entamés pour l'année en cours ; la ligne « Résultat » exclut les Neutres
+  (virements entre comptes), affichés à part ; les opérations sans poste
+  apparaissent dans « À classer ». Totaux calculés dans la base (fonction
+  `bilan_par_mois`).
+- Prévisionnel (à venir) : les prévisions sont modifiables à tout moment, y
+  compris en milieu de mois ; une prévision est remplacée par le montant réel
+  une fois l'opération passée.
 
 ## Règles de travail
 

@@ -120,3 +120,20 @@ tr.edition td { background: var(--fond); }
 @media (max-width: 640px) {
   .division .part { grid-template-columns: 1fr 90px; }
 }
+
+/* Bilan par mois */
+.barre-bilan { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; }
+.barre-bilan label:first-child { min-width: 120px; }
+.tableau-bilan { padding: 0; }
+.tableau-bilan table { font-size: 0.85rem; }
+.tableau-bilan th, .tableau-bilan td { padding: 5px 8px; }
+.tableau-bilan .col-poste { position: sticky; left: 0; background: var(--carte); text-align: left; min-width: 170px; z-index: 1; }
+.tableau-bilan tbody th.col-poste { color: var(--texte); font-weight: 400; font-size: 0.85rem; border-bottom: 1px solid var(--bord); }
+.tableau-bilan tr.titre-categorie th.col-poste { font-weight: 600; padding-top: 14px; color: var(--accent); border-bottom: 0; }
+.tableau-bilan tr.poste th.col-poste { padding-left: 18px; }
+.tableau-bilan tr.sous-total td, .tableau-bilan tr.sous-total th { font-weight: 600; }
+.tableau-bilan tr.sous-total td { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.tableau-bilan tr.resultat td, .tableau-bilan tr.resultat th { font-weight: 700; border-top: 2px solid var(--texte); }
+.tableau-bilan td.vide { color: var(--discret); opacity: 0.5; }
+.app.large { max-width: 1600px; }
+.tableau-bilan tr.sous-total th.col-poste { background: color-mix(in srgb, var(--accent) 5%, var(--carte)); }
