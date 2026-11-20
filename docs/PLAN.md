@@ -88,6 +88,7 @@ l'application pourra donc reconnaître le compte toute seule.
   - [x] Bilan par mois (fonction `bilan_par_mois`, écran « Bilan par mois »).
   - [ ] Bilan par années.
   - [x] Objectifs / prévisionnel (table `objectifs`, écran « Prév & Targets »).
+  - [x] Soldes annuels (fonction `soldes_annuels`, écran « Soldes annuels »).
 - [ ] **Étape 6** — Mise en ligne sur Netlify avec connexion obligatoire.
   En cours : site Netlify privé (équipe « Famille Giraud », compte familial),
   mis à jour à la main en glissant le dossier `dist` dans l'onglet Deploys.
@@ -138,6 +139,17 @@ l'application pourra donc reconnaître le compte toute seule.
   (mois précis seulement si la dépense revient au même mois l'année d'avant) ;
   une pastille « à revoir » signale un objectif qui ne correspond plus aux
   12 derniers mois, sans jamais le modifier automatiquement.
+
+- Soldes annuels (format de l'onglet Excel) : une ligne par type de compte
+  (Courant = comptes courants + cartes + cash, Epargne, Retraite, Titres),
+  le solde « au jour », puis pour chaque année la variation du solde (date
+  réelle des opérations, comptes fermés inclus) ; années affichables au choix
+  (par défaut depuis 2020).
+- Corrections de données (session du 20/11/2026) : deux opérations Cash datées
+  par erreur de 1982 remises en octobre 2024 (leur mois de rattachement) ;
+  les comptes fermés qui gardaient quelques centimes (arrondis de la reprise)
+  remis à zéro par une opération « Remise à zéro du solde (compte fermé) »
+  classée en Neutres. Total général inchangé.
 
 ## Règles de travail
 

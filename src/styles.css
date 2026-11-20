@@ -207,3 +207,20 @@ table.table-synthese td:nth-child(3) { white-space: nowrap; }
 /* Barre d'onglets : défile sur les petits écrans au lieu de déborder */
 .onglets { max-width: 100%; overflow-x: auto; }
 .onglets button { white-space: nowrap; flex: 0 0 auto; }
+
+/* Soldes annuels */
+.tableau-soldes .col-poste { width: 230px; min-width: 230px; max-width: 230px; }
+.tableau-soldes .col-au-jour { position: sticky; left: 230px; z-index: 2; background: var(--carte); font-weight: 600;
+  border-left: 2px solid var(--texte); border-right: 2px solid var(--texte); min-width: 120px; }
+.tableau-soldes thead .col-au-jour { border-top: 2px solid var(--texte); }
+.tableau-soldes tr.resultat .col-au-jour { border-bottom: 2px solid var(--texte); }
+.tableau-soldes td { min-width: 84px; }
+/* fond opaque pour que les années ne se voient pas dessous au défilement */
+.tableau-bilan.tableau-soldes tr td.col-au-jour, .tableau-bilan.tableau-soldes tr th.col-au-jour { background: var(--carte); }
+.tableau-bilan.tableau-soldes tr.categorie.ouverte td.col-au-jour { background: color-mix(in srgb, var(--accent) 5%, var(--carte)); }
+.tableau-bilan.tableau-soldes td.vide.col-au-jour { opacity: 1; color: var(--discret); }
+.choix-annees { position: relative; }
+.choix-annees .bouton-filtre { border: 1px solid var(--bord); padding: 6px 12px; margin: 0; border-radius: 8px; background: var(--fond); }
+.liste-cases.annees { grid-template-columns: repeat(3, 1fr); max-height: 220px; }
+.barre-bilan { overflow: visible; }
+.liste-cases.annees label.case { min-width: 0; }
