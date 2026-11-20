@@ -43,7 +43,7 @@ export default function Synthese({ onChoisirCompte }: { onChoisirCompte: (id: nu
               <h2>{g.titre}</h2>
               <strong className={sousTotal < 0 ? "negatif" : ""}>{formatMontant(sousTotal)}</strong>
             </div>
-            <table>
+            <table className="table-synthese">
               <thead>
                 <tr>
                   <th>Banque</th>

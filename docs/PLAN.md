@@ -87,7 +87,7 @@ l'application pourra donc reconnaître le compte toute seule.
   par année, objectifs.
   - [x] Bilan par mois (fonction `bilan_par_mois`, écran « Bilan par mois »).
   - [ ] Bilan par années.
-  - [ ] Objectifs / prévisionnel.
+  - [x] Objectifs / prévisionnel (table `objectifs`, écran « Prév & Targets »).
 - [ ] **Étape 6** — Mise en ligne sur Netlify avec connexion obligatoire.
   En cours : site Netlify privé (équipe « Famille Giraud », compte familial),
   mis à jour à la main en glissant le dossier `dist` dans l'onglet Deploys.
@@ -128,9 +128,16 @@ l'application pourra donc reconnaître le compte toute seule.
   (virements entre comptes), affichés à part ; les opérations sans poste
   apparaissent dans « À classer ». Totaux calculés dans la base (fonction
   `bilan_par_mois`).
-- Prévisionnel (à venir) : les prévisions sont modifiables à tout moment, y
-  compris en milieu de mois ; une prévision est remplacée par le montant réel
-  une fois l'opération passée.
+- Prévisionnel : un objectif par poste, modifiable à tout moment.
+  « Régulier » = N opérations par mois d'un montant habituel ; « variable » =
+  un montant par mois ; chaque objectif peut ne concerner que certains mois
+  (ex. impôts). Mois passés = réel ; mois en cours = réel + reste attendu
+  (régulier : opérations encore attendues ; variable : objectif au prorata des
+  jours restants, comptés jusqu'à la date du dernier import) ; mois suivants =
+  objectif. Les objectifs sont pré-remplis à partir des 24 derniers mois
+  (mois précis seulement si la dépense revient au même mois l'année d'avant) ;
+  une pastille « à revoir » signale un objectif qui ne correspond plus aux
+  12 derniers mois, sans jamais le modifier automatiquement.
 
 ## Règles de travail
 
