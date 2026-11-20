@@ -207,11 +207,11 @@ th.th-filtre { position: relative; white-space: nowrap; }
 .plus-moins:hover { border-color: var(--accent); }
 
 /* Prév & Targets */
-.tableau-bilan th.en-cours, .tableau-bilan td.en-cours { background: color-mix(in srgb, var(--encours) 26%, transparent); }
-.tableau-bilan th.a-venir, .tableau-bilan td.a-venir { font-style: italic; background: color-mix(in srgb, var(--encours) 7%, transparent); }
+.tableau-bilan th.en-cours, .tableau-bilan td.en-cours { background: color-mix(in srgb, var(--accent2) 22%, transparent); }
+.tableau-bilan th.a-venir, .tableau-bilan td.a-venir { font-style: italic; background: color-mix(in srgb, var(--accent2) 7%, transparent); }
 .tableau-bilan .col-prev { font-weight: 600; border-left: 1px solid var(--bord); }
-.legende-en-cours { background: color-mix(in srgb, var(--encours) 30%, transparent); padding: 0 4px; border-radius: 4px; }
-.legende-a-venir { font-style: italic; background: color-mix(in srgb, var(--encours) 10%, transparent); padding: 0 4px; border-radius: 4px; }
+.legende-en-cours { background: color-mix(in srgb, var(--accent2) 26%, transparent); padding: 0 4px; border-radius: 4px; }
+.legende-a-venir { font-style: italic; background: color-mix(in srgb, var(--accent2) 10%, transparent); padding: 0 4px; border-radius: 4px; }
 .pastille { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; line-height: 1.6;
   background: color-mix(in srgb, var(--encours) 25%, transparent); color: var(--texte); vertical-align: middle; }
 .pastille.neutre { background: var(--fond); color: var(--discret); font-weight: 400; border: 1px solid var(--bord); }
