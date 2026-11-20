@@ -8,6 +8,7 @@ export type CompteImport = {
   titulaire: string;
   identifiant_import: string | null;
   ouvert: boolean;
+  type_compte: string;
 };
 
 export type Poste = { id: number; nom: string; categorie: string; rang: number; ordre: number };
@@ -26,7 +27,7 @@ async function toutLire<T>(construire: () => any): Promise<T[]> {
 export async function chargerComptes(): Promise<CompteImport[]> {
   const { data, error } = await supabase
     .from("comptes")
-    .select("id, banque, nom, titulaire, identifiant_import, ouvert")
+    .select("id, banque, nom, titulaire, identifiant_import, ouvert, type_compte")
     .order("banque")
     .order("nom");
   if (error) throw new Error(error.message);
@@ -58,6 +59,18 @@ export async function chargerExistantes(compteId: number, depuis: string) {
       .select("date_operation, libelle, montant")
       .eq("compte_id", compteId)
       .gte("date_operation", depuis)
+      .order("id"),
+  );
+}
+
+/** Opérations des cartes (pour retrouver la carte d'un décompte Visa). */
+export async function chargerMouvementsCartes(compteIds: number[]) {
+  if (compteIds.length === 0) return [];
+  return toutLire<{ compte_id: number; date_operation: string; libelle: string; montant: number }>(() =>
+    supabase
+      .from("operations")
+      .select("compte_id, date_operation, libelle, montant")
+      .in("compte_id", compteIds)
       .order("id"),
   );
 }
@@ -131,6 +144,7 @@ export async function reclasser(ids: number[], posteId: number) {
 }
 
 export type LigneAImporter = {
+  compte_id?: number; // autre compte que celui du fichier (ligne positive d'un décompte Visa sur la carte)
   date_operation: string;
   libelle: string;
   montant: number;

@@ -115,6 +115,11 @@ l'application pourra donc reconnaître le compte toute seule.
 - Import : compte reconnu par l'IBAN ou le numéro de carte masqué ;
   opérations déjà présentes ignorées (y compris celles dont le libellé Excel
   avait été complété d'une note) ; une ligne sans poste bloque l'import.
+- Décomptes Visa : à l'import du compte courant, chaque « DECOMPTE VISA AU … »
+  est aussi ajouté en positif sur la carte concernée (même date, même poste),
+  dans le même enregistrement. Carte proposée : celle dont le solde à la date du
+  relevé correspond le mieux au montant ; modifiable avant validation. Si la
+  ligne positive existe déjà sur une carte, rien n'est ajouté.
 - Classement proposé : règles des membres d'abord (ex. HESPERANGE → Garde
   d'enfants, à confirmer ; AMAZON / AMZN → toujours à classer), puis historique.
 - Les notes sont séparées du libellé de la banque (le libellé n'est jamais

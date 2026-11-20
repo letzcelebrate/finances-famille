@@ -235,3 +235,5 @@ table.table-synthese td:nth-child(3) { white-space: nowrap; }
 .tableau-bilan .col-an-avant { border-left: 2px solid var(--bord); }
 .tableau-bilan td.col-moy { color: var(--discret); }
 .tableau-bilan td.col-moy.negatif { color: color-mix(in srgb, var(--negatif) 75%, var(--discret)); }
+.sous.decompte { margin-top: 6px; }
+.sous.decompte select { font-size: 0.85rem; padding: 2px 4px; }

@@ -3,11 +3,13 @@ import { formatDate, formatMontant } from "../lib/format";
 import { lireCsvRaiffeisen, ErreurImport, type FichierImport } from "../lib/import/raiffeisen";
 import { empreinte, separerNouvelles } from "../lib/import/empreinte";
 import { preparerClassement, type Proposition } from "../lib/import/classement";
+import { attribuerCartes } from "../lib/import/decomptes";
 import {
   ajouterRegle,
   chargerComptes,
   chargerExistantes,
   chargerHistorique,
+  chargerMouvementsCartes,
   chargerRegles,
   importer,
   memoriserIdentifiant,
@@ -29,6 +31,8 @@ type Ligne = {
   parts: Part[] | null; // division en plusieurs postes
   modifie: boolean;
   inclure: boolean;
+  // décompte Visa : carte sur laquelle ajouter la même somme en positif
+  decompte: { carte_id: number | null; deja_presente: boolean } | null;
 };
 
 type Analyse = {
@@ -57,6 +61,10 @@ export default function Import() {
     chargerComptes().then(setComptes).catch((e) => setErreur(e.message));
   }, []);
 
+  // cartes de la même banque, encore ouvertes (destinataires possibles d'un décompte Visa)
+  const cartesDe = (compte: CompteImport) =>
+    comptes.filter((c) => c.ouvert && c.type_compte === "Carte Bancaire" && c.banque === compte.banque);
+  const nomCompte = (id: number | null) => comptes.find((c) => c.id === id)?.nom ?? null;
   const nomPoste = (id: number | null) => postes.find((p) => p.id === id)?.nom ?? null;
   const majLigne = (cle: number, m: Partial<Ligne>) => setLignes((ls) => ls.map((x) => (x.cle === cle ? { ...x, ...m } : x)));
 
@@ -79,22 +87,33 @@ export default function Import() {
   async function preparer(nomFichier: string, fichier: FichierImport, compte: CompteImport, garder: Ligne[] = []) {
     setEtat("analyse");
     const depuis = fichier.lignes.map((l) => l.date_operation).sort()[0];
-    const [existantes, historique, regles, solde] = await Promise.all([
+    const cartes = fichier.format === "raiffeisen_compte" ? cartesDe(compte) : [];
+    const [existantes, historique, regles, solde, mouvementsCartes] = await Promise.all([
       chargerExistantes(compte.id, depuis),
       chargerHistorique(),
       chargerRegles(),
       soldeCompte(compte.id),
+      chargerMouvementsCartes(cartes.map((c) => c.id)),
     ]);
     const chrono = [...fichier.lignes].sort((a, b) => a.date_operation.localeCompare(b.date_operation));
     const { presentes, nouvelles } = separerNouvelles(chrono, existantes);
     const proposer = preparerClassement(historique, regles);
+    const attributions = attribuerCartes(
+      nouvelles.map((l, i) => ({ cle: i, date_operation: l.date_operation, libelle: l.libelle, montant: l.montant })),
+      cartes.map((c) => ({ id: c.id, mouvements: mouvementsCartes.filter((m) => m.compte_id === c.id) })),
+    );
     setLignes(
       nouvelles.map((l, i) => {
         const p = proposer(l.libelle);
         // conserver ce qui a déjà été saisi à la main (ex. après création d'une règle)
         const avant = garder.find((g) => g.cle === i && g.modifie);
-        const base = { ...l, cle: i, proposition: p, poste_id: p.poste_id, note: "", parts: null, modifie: false, inclure: true };
-        return avant ? { ...base, poste_id: avant.poste_id, note: avant.note, parts: avant.parts, modifie: true, inclure: avant.inclure } : base;
+        const base = {
+          ...l, cle: i, proposition: p, poste_id: p.poste_id, note: "", parts: null, modifie: false, inclure: true,
+          decompte: attributions.get(i) ?? null,
+        };
+        return avant
+          ? { ...base, poste_id: avant.poste_id, note: avant.note, parts: avant.parts, modifie: true, inclure: avant.inclure, decompte: avant.decompte }
+          : base;
       }),
     );
     setAnalyse({ nomFichier, fichier, compte, dejaPresentes: presentes.length, solde });
@@ -115,6 +134,7 @@ export default function Import() {
   async function valider() {
     if (!analyse?.compte) return;
     const aEnvoyer = lignes.filter((l) => l.inclure);
+    const contreparties = aEnvoyer.filter((l) => l.decompte?.carte_id != null && !l.decompte.deja_presente);
     setEtat("envoi");
     setErreur(null);
     try {
@@ -132,9 +152,28 @@ export default function Import() {
           note: l.note.trim(),
           ventilations: l.parts ? partsValides(l.parts, l.montant)! : [],
           empreinte: empreinte(l.date_operation, l.libelle, l.montant),
+        })).concat(contreparties.map((l) => {
+          const carte = comptes.find((c) => c.id === l.decompte!.carte_id)!;
+          return {
+            compte_id: carte.id,
+            date_operation: l.date_operation,
+            libelle: l.libelle,
+            montant: -l.montant,
+            devise: l.devise,
+            titulaire: carte.titulaire,
+            poste_id: l.parts ? null : l.poste_id,
+            note: "",
+            ventilations: [],
+            empreinte: empreinte(l.date_operation, l.libelle, -l.montant),
+          };
         })),
       );
-      setResultat(`${aEnvoyer.length} opération(s) importée(s) sur ${analyse.compte.banque} — ${analyse.compte.nom}.`);
+      setResultat(
+        `${aEnvoyer.length} opération(s) importée(s) sur ${analyse.compte.banque} — ${analyse.compte.nom}.` +
+        (contreparties.length > 0
+          ? ` Décompte(s) Visa reporté(s) en positif : ${contreparties.map((l) => `${nomCompte(l.decompte!.carte_id)} ${formatMontant(-l.montant)}`).join(", ")}.`
+          : ""),
+      );
       setEtat("fini");
     } catch (e) {
       setErreur(`L'import a échoué, rien n'a été enregistré. (${(e as Error).message})`);
@@ -315,6 +354,24 @@ export default function Import() {
                           <div className="sous">{l.type_mouvement}</div>
                           <input className="note" placeholder="Ajouter une note…" value={l.note}
                             onChange={(e) => majLigne(l.cle, { note: e.target.value })} />
+                          {l.decompte && (
+                            <div className="sous decompte">
+                              {l.decompte.deja_presente ? (
+                                <>✓ déjà reporté en positif sur {nomCompte(l.decompte.carte_id)}</>
+                              ) : (
+                                <>
+                                  Reporter {formatMontant(-l.montant)} en positif sur la carte :{" "}
+                                  <select value={l.decompte.carte_id ?? ""}
+                                    onChange={(e) => majLigne(l.cle, {
+                                      decompte: { carte_id: e.target.value === "" ? null : Number(e.target.value), deja_presente: false },
+                                    })}>
+                                    {cartesDe(analyse.compte!).map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                                    <option value="">— ne pas reporter —</option>
+                                  </select>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className={`droite nowrap ${l.montant < 0 ? "negatif" : "positif"}`}>{formatMontant(l.montant, l.devise)}</td>
                         <td className="poste">
