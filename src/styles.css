@@ -141,3 +141,35 @@ tr.edition td { background: var(--fond); }
 /* Synthèse : patrimoine disponible sous le total */
 .total .sous-total-patrimoine { flex-basis: 100%; text-align: right; color: var(--discret); font-size: 0.9rem; }
 .total .sous-total-patrimoine strong { font-size: 1rem; color: var(--texte); }
+
+/* Opérations : filtres « comme Excel » sous les titres de colonnes */
+.tableau-operations { overflow: visible; }
+th.th-filtre { position: relative; white-space: nowrap; }
+.bouton-filtre { font: inherit; color: inherit; background: none; border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 6px; cursor: pointer; }
+.bouton-filtre:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.bouton-filtre.actif { color: var(--accent); font-weight: 600; }
+.menu-filtre { position: absolute; top: 100%; left: 0; z-index: 20; margin-top: 4px; width: 290px; max-width: calc(100vw - 32px);
+  background: var(--carte); border: 1px solid var(--bord); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  text-align: left; white-space: normal; font-weight: 400; color: var(--texte); font-size: 0.9rem; }
+.menu-filtre.a-droite { left: auto; right: 0; }
+.menu-contenu { display: grid; gap: 10px; padding: 12px; }
+.menu-contenu input[type="search"], .menu-contenu input[type="date"], .menu-contenu input[inputmode] { width: 100%; }
+.menu-boutons { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.menu-boutons .principal { padding: 6px 18px; }
+.raccourcis { display: flex; flex-wrap: wrap; gap: 6px; }
+.raccourcis button, .raccourci-seul { font: inherit; font-size: 0.85rem; padding: 4px 10px; border: 1px solid var(--bord); border-radius: 999px; background: var(--fond); color: var(--texte); cursor: pointer; }
+.raccourci-seul { justify-self: start; }
+.tout-cocher { display: flex; gap: 14px; }
+.liste-cases { max-height: 260px; overflow-y: auto; display: grid; gap: 2px; border: 1px solid var(--bord); border-radius: 8px; padding: 6px 8px; }
+.liste-cases label.case { font-size: 0.88rem; padding: 2px 0; }
+.groupe-cases { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--discret); margin: 8px 0 2px; }
+.choix-sens { display: flex; gap: 14px; flex-wrap: wrap; }
+
+/* Bilan par mois : catégories repliables (+ / −) */
+.tableau-bilan tr.categorie td, .tableau-bilan tr.categorie th { font-weight: 600; }
+.tableau-bilan tr.categorie.ouverte td { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.tableau-bilan tr.categorie.ouverte th.col-poste { background: color-mix(in srgb, var(--accent) 5%, var(--carte)); }
+.tableau-bilan tr.poste th.col-poste { padding-left: 54px; font-size: 0.82rem; }
+.plus-moins { font: inherit; font-weight: 600; width: 20px; height: 20px; line-height: 16px; padding: 0; margin-right: 8px;
+  border: 1px solid var(--bord); border-radius: 5px; background: var(--fond); color: var(--accent); cursor: pointer; vertical-align: middle; }
+.plus-moins:hover { border-color: var(--accent); }

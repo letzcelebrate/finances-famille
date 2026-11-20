@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "../lib/supabase";
 import { moisPourMoyenne, moyenneMensuelle, organiserBilan, type Bilan, type BlocCategorie, type LigneBilanBrute, type Montants } from "../lib/bilan";
 
@@ -10,10 +10,19 @@ function Cellule({ valeur }: { valeur: number }) {
   return <td className={`droite nowrap ${valeur < 0 ? "negatif" : ""}`}>{nombre.format(valeur)}</td>;
 }
 
-function Ligne({ nom, montants, nbMois, classe }: { nom: string; montants: Montants; nbMois: number; classe?: string }) {
+function Ligne({ nom, montants, nbMois, classe, bouton }: {
+  nom: string;
+  montants: Montants;
+  nbMois: number;
+  classe?: string;
+  bouton?: ReactNode;
+}) {
   return (
     <tr className={classe}>
-      <th scope="row" className="col-poste">{nom}</th>
+      <th scope="row" className="col-poste">
+        {bouton}
+        {nom}
+      </th>
       {montants.mois.map((v, i) => (
         <Cellule key={i} valeur={v} />
       ))}
@@ -23,12 +32,24 @@ function Ligne({ nom, montants, nbMois, classe }: { nom: string; montants: Monta
   );
 }
 
-function Categorie({ bloc, nbMois, details }: { bloc: BlocCategorie; nbMois: number; details: boolean }) {
+/** Une catégorie : sa ligne de total, avec un + pour afficher ses postes juste en dessous. */
+function Categorie({ bloc, nbMois, ouverte, onBasculer }: {
+  bloc: BlocCategorie;
+  nbMois: number;
+  ouverte: boolean;
+  onBasculer: () => void;
+}) {
+  const bouton = (
+    <button type="button" className="plus-moins" aria-expanded={ouverte}
+      title={ouverte ? `Masquer le détail de ${bloc.nom}` : `Voir le détail de ${bloc.nom}`} onClick={onBasculer}>
+      {ouverte ? "−" : "+"}
+    </button>
+  );
   return (
     <Fragment>
-      {details &&
+      <Ligne nom={bloc.nom} montants={bloc.sousTotal} nbMois={nbMois} classe={`categorie ${ouverte ? "ouverte" : ""}`} bouton={bouton} />
+      {ouverte &&
         bloc.postes.map((p) => <Ligne key={p.nom} nom={p.nom} montants={p.montants} nbMois={nbMois} classe="poste" />)}
-      <Ligne nom={details ? `Total ${bloc.nom}` : bloc.nom} montants={bloc.sousTotal} nbMois={nbMois} classe="sous-total" />
     </Fragment>
   );
 }
@@ -37,7 +58,8 @@ export default function BilanMois() {
   const [annees, setAnnees] = useState<number[] | null>(null);
   const [annee, setAnnee] = useState<number | null>(null);
   const [bilan, setBilan] = useState<Bilan | null>(null);
-  const [details, setDetails] = useState(true);
+  // Catégories dont le détail des postes est affiché (aucune au départ)
+  const [ouvertes, setOuvertes] = useState<Set<string>>(new Set());
   const [erreur, setErreur] = useState<string | null>(null);
 
   useEffect(() => {
@@ -68,6 +90,15 @@ export default function BilanMois() {
   if (annee === null) return <p>Aucune opération.</p>;
 
   const nbMois = moisPourMoyenne(annee);
+  const toutes = bilan ? [...bilan.categories, ...(bilan.neutres ? [bilan.neutres] : [])].map((c) => c.nom) : [];
+  const toutOuvert = toutes.length > 0 && toutes.every((n) => ouvertes.has(n));
+  const basculer = (nom: string) =>
+    setOuvertes((o) => {
+      const s = new Set(o);
+      if (s.has(nom)) s.delete(nom);
+      else s.add(nom);
+      return s;
+    });
 
   return (
     <section>
@@ -83,7 +114,7 @@ export default function BilanMois() {
           </select>
         </label>
         <label className="case">
-          <input type="checkbox" checked={details} onChange={(e) => setDetails(e.target.checked)} />
+          <input type="checkbox" checked={toutOuvert} onChange={(e) => setOuvertes(new Set(e.target.checked ? toutes : []))} />
           Afficher le détail des postes
         </label>
         <span className="sous">
@@ -115,14 +146,7 @@ export default function BilanMois() {
             </thead>
             {bilan.categories.map((c) => (
               <tbody key={c.nom}>
-                {details && (
-                  <tr className="titre-categorie">
-                    <th scope="rowgroup" colSpan={15} className="col-poste">
-                      {c.nom}
-                    </th>
-                  </tr>
-                )}
-                <Categorie bloc={c} nbMois={nbMois} details={details} />
+                <Categorie bloc={c} nbMois={nbMois} ouverte={ouvertes.has(c.nom)} onBasculer={() => basculer(c.nom)} />
               </tbody>
             ))}
             <tbody>
@@ -135,7 +159,8 @@ export default function BilanMois() {
                     Neutres (virements entre comptes, hors résultat)
                   </th>
                 </tr>
-                <Categorie bloc={bilan.neutres} nbMois={nbMois} details={details} />
+                <Categorie bloc={bilan.neutres} nbMois={nbMois} ouverte={ouvertes.has(bilan.neutres.nom)}
+                  onBasculer={() => basculer(bilan.neutres!.nom)} />
               </tbody>
             )}
           </table>
