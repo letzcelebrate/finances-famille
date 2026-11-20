@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  aRevoir, cleMois, periode, prevoirPoste, reference, statut, suggererObjectif, TOUS_LES_MOIS, unAnAvant,
+  aRevoir, cleMois, ilYaNAns, periode, prevoirPoste, reference, statut, suggererObjectif, TOUS_LES_MOIS, unAnAvant,
   type Historique, type Objectif,
 } from "../previsionnel";
 
@@ -98,6 +98,13 @@ describe("periode", () => {
     const p = unAnAvant(periode("glissant", ref, jour));
     expect(p[0]).toEqual({ annee: 2025, mois: 5 });
     expect(p[11]).toEqual({ annee: 2026, mois: 4 });
+  });
+  it("il y a n ans : mai 2023 → avril 2024 pour n = 3", () => {
+    const base = periode("glissant", ref, jour);
+    expect(ilYaNAns(base, 1)).toEqual(unAnAvant(base));
+    const p = ilYaNAns(base, 3);
+    expect(p[0]).toEqual({ annee: 2023, mois: 5 });
+    expect(p[11]).toEqual({ annee: 2024, mois: 4 });
   });
   it("statut des mois", () => {
     expect(statut({ annee: 2026, mois: 10 }, ref)).toBe("passe");

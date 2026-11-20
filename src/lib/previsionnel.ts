@@ -141,8 +141,10 @@ export function periode(vue: Vue, ref: MoisAbs, aujourdhui: Date = new Date()): 
   return TOUS_LES_MOIS.map((_, i) => decaler(debut, i));
 }
 
+/** Les mêmes mois, n années plus tôt. */
+export const ilYaNAns = (p: MoisAbs[], n: number): MoisAbs[] => p.map((m) => ({ annee: m.annee - n, mois: m.mois }));
 /** Les mêmes 12 mois, un an plus tôt. */
-export const unAnAvant = (p: MoisAbs[]): MoisAbs[] => p.map((m) => ({ annee: m.annee - 1, mois: m.mois }));
+export const unAnAvant = (p: MoisAbs[]): MoisAbs[] => ilYaNAns(p, 1);
 
 export function statut(m: MoisAbs, ref: MoisAbs): Statut {
   const a = m.annee * 12 + m.mois, r = ref.annee * 12 + ref.mois;

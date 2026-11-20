@@ -231,8 +231,16 @@ table.table-synthese td:nth-child(3) { white-space: nowrap; }
 .tableau-bilan tr.bandeau th { text-align: center; font-weight: 600; color: var(--texte); border-bottom: 0; }
 .tableau-bilan tr.bandeau th.bandeau-periode { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .tableau-bilan tr.bandeau .sous-titre { font-weight: 400; font-size: 0.78rem; color: var(--discret); }
-.tableau-bilan .col-an-avant, .tableau-bilan .col-an-avant-moy { background: color-mix(in srgb, #3a9d5d 9%, transparent); }
-.tableau-bilan .col-an-avant { border-left: 2px solid var(--bord); }
+.tableau-bilan .col-cmp { background: color-mix(in srgb, #3a9d5d 9%, transparent); }
+.tableau-bilan .col-cmp.bord { border-left: 2px solid var(--bord); }
+.tableau-bilan tr.bandeau th.bandeau-cmp { background: color-mix(in srgb, #3a9d5d 14%, transparent); }
+.chips { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chips .etiq { font-size: 0.72rem; color: var(--discret); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+.chip { font: inherit; font-size: 0.82rem; border: 1px solid var(--bord); background: var(--fond); color: var(--texte); border-radius: 999px; padding: 4px 11px; cursor: pointer; }
+.chip.actif { background: color-mix(in srgb, #3a9d5d 16%, transparent); border-color: #3a9d5d; font-weight: 600; }
+.cmp-mois { display: block; font-size: 0.70rem; color: var(--discret); margin-top: 2px; font-weight: 400; font-style: normal; }
+.delta.pos { color: var(--positif); }
+.delta.neg { color: var(--negatif); }
 .tableau-bilan td.col-moy { color: var(--discret); }
 .tableau-bilan td.col-moy.negatif { color: color-mix(in srgb, var(--negatif) 75%, var(--discret)); }
 .sous.decompte { margin-top: 6px; }

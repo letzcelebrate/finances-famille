@@ -4,7 +4,7 @@ import { formatDate, formatMontant } from "../lib/format";
 import { lireSaisie, usePostes } from "../components/Classement";
 import { organiserBilan, NOM_NEUTRES, type BlocCategorie, type LigneBilanBrute, type Montants } from "../lib/bilan";
 import {
-  aRevoir, cleMois, decaler, periode, prevoirPoste, reference, statut, suggererObjectif, TOUS_LES_MOIS, unAnAvant,
+  aRevoir, cleMois, decaler, ilYaNAns, periode, prevoirPoste, reference, statut, suggererObjectif, TOUS_LES_MOIS,
   type Historique, type Mode, type MoisAbs, type Objectif, type Reference, type Vue,
 } from "../lib/previsionnel";
 
@@ -18,8 +18,10 @@ const nomLong = (m: MoisAbs) => `${MOIS_LONGS[m.mois - 1]} ${m.annee}`;
 const plage = (a: MoisAbs, b: MoisAbs) => (rang(a) === rang(b) ? nomLong(a) : `${nomLong(a)} → ${nomLong(b)}`);
 const majuscule = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const somme = (v: number[]) => Math.round(v.reduce((t, x) => t + Math.round(x * 100), 0)) / 100;
+const arr = (n: number) => Math.round(n * 100) / 100;
 const moyenne = (total: number) => Math.round((total / 12) * 100) / 100;
-const NB_COLONNES = 19; // poste + 12 mois + prévision, moy., objectif, écart + un an avant (total, moy.)
+// Années de comparaison proposées : 1, 2 ou 3 ans avant la période affichée.
+const DECALAGES = [1, 2, 3];
 
 type LigneHisto = { poste_id: number; mois: string[]; nb: number[]; total: (number | string)[] };
 
@@ -38,6 +40,40 @@ function Cellule({ valeur, classe = "" }: { valeur: number; classe?: string }) {
   return <td className={`droite nowrap ${valeur < 0 ? "negatif" : ""} ${classe}`}>{nombre.format(valeur)}</td>;
 }
 
+/** Écart de comparaison : vert si on fait mieux (positif), rouge sinon. */
+function CelluleEcart({ valeur, classe = "" }: { valeur: number; classe?: string }) {
+  if (valeur === 0) return <td className={`droite nowrap vide ${classe}`}>–</td>;
+  const signe = valeur > 0 ? "+" : "−";
+  return (
+    <td className={`droite nowrap ${classe}`}>
+      <span className={`delta ${valeur > 0 ? "pos" : "neg"}`}>{signe}{nombre.format(Math.abs(valeur))}</span>
+    </td>
+  );
+}
+
+/** Cellule d'un mois : le montant, et dessous (si demandé) le même mois l'année comparée + l'écart. */
+function CelluleMois({ valeur, cmp, classe = "" }: { valeur: number; cmp?: number; classe?: string }) {
+  const vide = valeur === 0;
+  return (
+    <td className={`droite nowrap ${valeur < 0 ? "negatif" : ""} ${vide ? "vide" : ""} ${classe}`}>
+      {vide ? "–" : nombre.format(valeur)}
+      {cmp !== undefined && (
+        <span className="cmp-mois">
+          {cmp === 0 ? "–" : nombre.format(cmp)}{" "}
+          {(() => {
+            const e = arr(valeur - cmp);
+            if (e === 0) return <span className="delta">0</span>;
+            return <span className={`delta ${e > 0 ? "pos" : "neg"}`}>{e > 0 ? "+" : "−"}{nombre.format(Math.abs(e))}</span>;
+          })()}
+        </span>
+      )}
+    </td>
+  );
+}
+
+/** Une comparaison affichée : le décalage (en années) et le bilan réel correspondant. */
+type Comparaison = { decalage: number; bilan: ReturnType<typeof organiserBilan> };
+
 export default function Previsionnel() {
   const { postes } = usePostes();
   const [donnees, setDonnees] = useState<{
@@ -54,6 +90,8 @@ export default function Previsionnel() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const [vue, setVue] = useState<Vue>("glissant");
+  const [decalages, setDecalages] = useState<Set<number>>(new Set([1]));
+  const [parMois, setParMois] = useState(true);
   const [ouvertes, setOuvertes] = useState<Set<string>>(new Set());
   const [edition, setEdition] = useState<number | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -65,9 +103,10 @@ export default function Previsionnel() {
       if (e1) return !annule && setErreur(e1.message);
       const jour = new Date();
       const ref = reference((derniere as string | null) ?? null, jour);
-      // Les deux vues (glissante et civile) et leur année précédente : tout est chargé une fois.
+      // Les deux vues (glissante et civile) et leurs 3 années de comparaison : tout est chargé une fois.
       const affichables = [...periode("glissant", ref, jour), ...periode("civile", ref, jour)];
-      const tous = [...affichables, ...unAnAvant(affichables)];
+      const avant = DECALAGES.flatMap((n) => ilYaNAns(affichables, n));
+      const tous = [...affichables, ...avant];
       const annees = [...new Set(tous.map((m) => m.annee))].sort((a, b) => a - b);
       const premier = affichables.reduce((a, b) => (rang(b) < rang(a) ? b : a));
       const dernier = affichables.reduce((a, b) => (rang(b) > rang(a) ? b : a));
@@ -110,7 +149,8 @@ export default function Previsionnel() {
     if (!donnees || postes.length === 0) return null;
     const { ref } = donnees;
     const per = periode(vue, ref, donnees.jour);
-    const avant = unAnAvant(per);
+    const decal = [...decalages].sort((a, b) => a - b);
+    const avants = decal.map((n) => ({ decalage: n, per: ilYaNAns(per, n) }));
     const objectifs = new Map(donnees.objectifs.map((o) => [o.poste_id, o]));
     const valeur = (id: number | null, m: MoisAbs) => {
       const l = donnees.reel.get(m.annee)?.get(id);
@@ -119,7 +159,7 @@ export default function Previsionnel() {
 
     const lignesPrev: LigneBilanBrute[] = [];
     const lignesObj: LigneBilanBrute[] = [];
-    const lignesAvant: LigneBilanBrute[] = [];
+    const lignesCmp: LigneBilanBrute[][] = avants.map(() => []);
     const suggestions = new Map<number, Objectif | null>();
     const ids = new Map<string, number>(); // nom du poste -> id
     const versLigne = (base: object, v: number[]) =>
@@ -129,8 +169,9 @@ export default function Previsionnel() {
     for (const p of tries) {
       const o = objectifs.get(p.id) ?? null;
       const reel = per.map((m) => valeur(p.id, m));
-      const reelAvant = avant.map((m) => valeur(p.id, m));
-      if (!o && reel.every((v) => v === 0) && reelAvant.every((v) => v === 0)) continue;
+      const reelsAvant = avants.map((a) => a.per.map((m) => valeur(p.id, m)));
+      const vide = reel.every((v) => v === 0) && reelsAvant.every((r) => r.every((v) => v === 0));
+      if (!o && vide) continue;
       const suggestion = p.categorie === NOM_NEUTRES ? null : suggererObjectif(p.id, donnees.passe.get(p.id) ?? new Map(), ref.annee, ref.mois);
       suggestions.set(p.id, suggestion);
       ids.set(p.nom, p.id);
@@ -140,23 +181,24 @@ export default function Previsionnel() {
       const base = { categorie_id: null, categorie: p.categorie, categorie_rang: p.rang, poste_id: p.id, poste: p.nom, poste_ordre: p.ordre };
       lignesPrev.push(versLigne(base, prevision));
       lignesObj.push(versLigne(base, objectif));
-      lignesAvant.push(versLigne(base, reelAvant));
+      reelsAvant.forEach((r, k) => lignesCmp[k].push(versLigne(base, r)));
     }
     // Opérations sans poste : réel seulement
     const sansPoste = per.map((m) => valeur(null, m));
-    const sansPosteAvant = avant.map((m) => valeur(null, m));
-    if (sansPoste.some((v) => v !== 0) || sansPosteAvant.some((v) => v !== 0)) {
+    const sansPosteAvant = avants.map((a) => a.per.map((m) => valeur(null, m)));
+    if (sansPoste.some((v) => v !== 0) || sansPosteAvant.some((r) => r.some((v) => v !== 0))) {
       const base = { categorie_id: null, categorie: null, categorie_rang: null, poste_id: null, poste: null, poste_ordre: null };
       lignesPrev.push(versLigne(base, sansPoste));
       lignesObj.push(versLigne(base, sansPoste.map(() => 0)));
-      lignesAvant.push(versLigne(base, sansPosteAvant));
+      sansPosteAvant.forEach((r, k) => lignesCmp[k].push(versLigne(base, r)));
     }
     return {
-      ref, per, avant,
-      prev: organiserBilan(lignesPrev), obj: organiserBilan(lignesObj), anAvant: organiserBilan(lignesAvant),
+      ref, per,
+      prev: organiserBilan(lignesPrev), obj: organiserBilan(lignesObj),
+      comparaisons: avants.map((a, k) => ({ decalage: a.decalage, bilan: organiserBilan(lignesCmp[k]) })) as Comparaison[],
       objectifs, suggestions, ids,
     };
-  }, [donnees, postes, vue]);
+  }, [donnees, postes, vue, decalages]);
 
   async function enregistrer(o: Objectif) {
     setEnvoi(true);
@@ -189,7 +231,7 @@ export default function Previsionnel() {
   if (erreur) return <p className="alerte">Erreur : {erreur}</p>;
   if (!donnees || !calcul) return <p>Chargement…</p>;
 
-  const { ref, per, avant, prev, obj, anAvant, objectifs, suggestions, ids } = calcul;
+  const { ref, per, prev, obj, comparaisons, objectifs, suggestions, ids } = calcul;
   const statuts = per.map((m) => statut(m, ref));
   const classeMois = (i: number) => (statuts[i] === "passe" ? "" : statuts[i]);
   const passes = per.filter((_, i) => statuts[i] === "passe");
@@ -197,8 +239,18 @@ export default function Previsionnel() {
   const aVenir = per.filter((_, i) => statuts[i] === "a-venir");
   const enteteMois = (m: MoisAbs) => (vue === "glissant" ? `${MOIS_COURTS[m.mois - 1]} ${String(m.annee).slice(2)}` : MOIS_COURTS[m.mois - 1]);
   const libellePeriode = majuscule(plage(per[0], per[11]));
-  const libelleAvant = plage(avant[0], avant[11]);
   const motTotal = vue === "civile" ? "année" : "12 mois";
+  const anneeComparee = (dec: number) => per[6].annee - dec; // année « principale » de la fenêtre comparée
+  const fenetreAvant = (dec: number) => ilYaNAns(per, dec);
+  const NB_COLONNES = 17 + 2 * comparaisons.length; // poste + 12 mois + prévision, moy., objectif, écart + 2 par année comparée
+
+  const basculerDecalage = (n: number) =>
+    setDecalages((d) => {
+      const s = new Set(d);
+      if (s.has(n)) s.delete(n);
+      else s.add(n);
+      return s;
+    });
 
   const toutes = [...prev.categories, ...(prev.neutres ? [prev.neutres] : [])].map((c) => c.nom);
   const toutOuvert = toutes.length > 0 && toutes.every((n) => ouvertes.has(n));
@@ -211,22 +263,29 @@ export default function Previsionnel() {
     });
   const nbARevoir = [...objectifs.values()].filter((o) => aRevoir(o, suggestions.get(o.poste_id) ?? null)).length;
 
-  const ligne = ({ nom, p, o, a, classe, avant: debut, apres }: {
-    nom: string; p: Montants; o: Montants; a: Montants; classe?: string; avant?: ReactNode; apres?: ReactNode;
+  const ligne = ({ nom, p, o, cmps, classe, avant: debut, apres }: {
+    nom: string; p: Montants; o: Montants; cmps: Montants[]; classe?: string; avant?: ReactNode; apres?: ReactNode;
   }) => (
       <tr className={classe}>
         <th scope="row" className="col-poste">{debut}{nom}{apres}</th>
-        {p.mois.map((v, i) => <Cellule key={i} valeur={v} classe={classeMois(i)} />)}
+        {p.mois.map((v, i) => (
+          <CelluleMois key={i} valeur={v} classe={classeMois(i)}
+            cmp={parMois && cmps.length > 0 ? cmps[0].mois[i] : undefined} />
+        ))}
         <Cellule valeur={p.total} classe="col-prev" />
         <Cellule valeur={moyenne(p.total)} classe="col-moy" />
         <Cellule valeur={o.total} />
-        <Cellule valeur={Math.round((p.total - o.total) * 100) / 100} />
-        <Cellule valeur={a.total} classe="col-an-avant" />
-        <Cellule valeur={moyenne(a.total)} classe="col-moy col-an-avant-moy" />
+        <Cellule valeur={arr(p.total - o.total)} />
+        {cmps.map((m, k) => (
+          <Fragment key={k}>
+            <Cellule valeur={m.total} classe="col-cmp bord" />
+            <CelluleEcart valeur={arr(p.total - m.total)} classe="col-cmp" />
+          </Fragment>
+        ))}
       </tr>
     );
 
-  const categorie = (bp: BlocCategorie, bo: BlocCategorie, ba: BlocCategorie) => {
+  const categorie = (bp: BlocCategorie, bo: BlocCategorie, bcs: BlocCategorie[]) => {
     const ouverte = ouvertes.has(bp.nom);
     const revoir = bp.postes.some((p) => {
       const id = ids.get(p.nom);
@@ -235,7 +294,8 @@ export default function Previsionnel() {
     });
     return (
       <tbody key={bp.nom}>
-        {ligne({ nom: bp.nom, p: bp.sousTotal, o: bo.sousTotal, a: ba.sousTotal, classe: `categorie ${ouverte ? "ouverte" : ""}`,
+        {ligne({ nom: bp.nom, p: bp.sousTotal, o: bo.sousTotal, cmps: bcs.map((b) => b.sousTotal),
+          classe: `categorie ${ouverte ? "ouverte" : ""}`,
           avant: (
             <button type="button" className="plus-moins" aria-expanded={ouverte} onClick={() => basculer(bp.nom)}
               title={ouverte ? `Masquer le détail de ${bp.nom}` : `Voir le détail de ${bp.nom}`}>
@@ -252,7 +312,7 @@ export default function Previsionnel() {
             const revoirPoste = o ? aRevoir(o, s) : false;
             return (
               <Fragment key={pp.nom}>
-                {ligne({ nom: pp.nom, p: pp.montants, o: bo.postes[i].montants, a: ba.postes[i].montants,
+                {ligne({ nom: pp.nom, p: pp.montants, o: bo.postes[i].montants, cmps: bcs.map((b) => b.postes[i].montants),
                   classe: `poste ${edition === id ? "ouverte" : ""}`,
                   apres: (
                     <>
@@ -293,6 +353,21 @@ export default function Previsionnel() {
             Année civile {donnees.jour.getFullYear()}
           </button>
         </span>
+        <span className="chips" role="group" aria-label="Années comparées">
+          <span className="etiq">Comparer avec</span>
+          {DECALAGES.map((n) => {
+            const actif = decalages.has(n);
+            return (
+              <button type="button" key={n} className={`chip ${actif ? "actif" : ""}`} aria-pressed={actif} onClick={() => basculerDecalage(n)}>
+                {anneeComparee(n)}{actif ? " ✓" : ""}
+              </button>
+            );
+          })}
+        </span>
+        <label className="case">
+          <input type="checkbox" checked={parMois} onChange={(e) => setParMois(e.target.checked)} />
+          Comparer chaque mois
+        </label>
         <label className="case">
           <input type="checkbox" checked={toutOuvert} onChange={(e) => setOuvertes(new Set(e.target.checked ? toutes : []))} />
           Afficher le détail des postes
@@ -305,7 +380,7 @@ export default function Previsionnel() {
           )}
           {aVenir.length > 0 && <> · <span className="legende-a-venir">{plage(aVenir[0], aVenir[aVenir.length - 1])} : objectifs</span></>}
           {!enCours && aVenir.length === 0 && " · tout est réel"}
-          {" "}· comparé au réel de {libelleAvant}
+          {comparaisons.length > 0 && <> · comparé au réel de {comparaisons.map((c) => anneeComparee(c.decalage)).join(", ")}</>}
         </span>
       </div>
 
@@ -331,7 +406,12 @@ export default function Previsionnel() {
             <tr className="bandeau">
               <th className="col-poste" />
               <th colSpan={16} className="bandeau-periode">{libellePeriode}</th>
-              <th colSpan={2} className="col-an-avant bandeau-an-avant">Un an avant<br /><span className="sous-titre">{libelleAvant}</span></th>
+              {comparaisons.map((c) => (
+                <th key={c.decalage} colSpan={2} className="col-cmp bord bandeau-cmp">
+                  Comparé à {anneeComparee(c.decalage)}<br />
+                  <span className="sous-titre">{plage(fenetreAvant(c.decalage)[0], fenetreAvant(c.decalage)[11])}</span>
+                </th>
+              ))}
             </tr>
             <tr>
               <th className="col-poste">Poste</th>
@@ -340,30 +420,36 @@ export default function Previsionnel() {
               <th className="droite">Moy.</th>
               <th className="droite">Objectif {motTotal}</th>
               <th className="droite">Écart</th>
-              <th className="droite col-an-avant">Total</th>
-              <th className="droite col-an-avant-moy">Moy.</th>
+              {comparaisons.map((c) => (
+                <Fragment key={c.decalage}>
+                  <th className="droite col-cmp bord">Réel {anneeComparee(c.decalage)}</th>
+                  <th className="droite col-cmp">Écart</th>
+                </Fragment>
+              ))}
             </tr>
           </thead>
-          {prev.categories.map((c, i) => categorie(c, obj.categories[i], anAvant.categories[i]))}
+          {prev.categories.map((c, i) => categorie(c, obj.categories[i], comparaisons.map((cm) => cm.bilan.categories[i])))}
           <tbody>
-            {ligne({ nom: "Résultat prévu (ressources − dépenses)", p: prev.resultat, o: obj.resultat, a: anAvant.resultat, classe: "resultat" })}
+            {ligne({ nom: "Résultat prévu (ressources − dépenses)", p: prev.resultat, o: obj.resultat,
+              cmps: comparaisons.map((c) => c.bilan.resultat), classe: "resultat" })}
           </tbody>
-          {prev.neutres && obj.neutres && anAvant.neutres && (
+          {prev.neutres && obj.neutres && (
             <>
               <tbody>
                 <tr className="titre-categorie">
                   <th scope="rowgroup" colSpan={NB_COLONNES} className="col-poste">Neutres (virements entre comptes, hors résultat)</th>
                 </tr>
               </tbody>
-              {categorie(prev.neutres, obj.neutres, anAvant.neutres)}
+              {categorie(prev.neutres, obj.neutres, comparaisons.map((c) => c.bilan.neutres as BlocCategorie))}
             </>
           )}
         </table>
       </div>
       <p className="sous">
-        Moy. = total ÷ 12. Écart = prévision − objectif. « Un an avant » : le réel des mêmes mois un an plus tôt.
-        Régulier : on ajoute les opérations encore attendues ce mois-ci. Variable : on ajoute l'objectif au prorata des
-        jours restants.
+        Moy. = total ÷ 12. Objectif / Écart : votre objectif saisi et l'écart avec la prévision. « Comparé à … » : le réel
+        des mêmes mois cette année-là ; l'écart (vert = mieux, rouge = moins bien) est la prévision moins ce réel. Case
+        « Comparer chaque mois » : sous chaque montant, le même mois de l'année comparée. Régulier : on ajoute les opérations
+        encore attendues ce mois-ci. Variable : on ajoute l'objectif au prorata des jours restants.
       </p>
     </section>
   );
