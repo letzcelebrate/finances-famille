@@ -1,32 +1,62 @@
+/* ---------------------------------------------------------------------------
+   Design system « Calm Finance »
+   Toutes les couleurs, la typographie et les variations financières passent par
+   ces variables. Ne pas coder de couleur en dur dans les composants : réutiliser
+   ces tokens pour garder une interface cohérente sur toutes les pages.
+--------------------------------------------------------------------------- */
 :root {
-  --fond: #f4f5f7;
-  --carte: #ffffff;
-  --texte: #1d2433;
-  --discret: #6b7385;
-  --bord: #e3e6ec;
-  --accent: #2f5bd3;
-  --negatif: #c0392b;
-  --positif: #1e7f4f;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Surfaces */
+  --fond: #f5f7fa;            /* arrière-plan général */
+  --carte: #ffffff;          /* cartes et surfaces */
+  /* Marque */
+  --accent: #315c72;         /* bleu ardoise primaire */
+  --accent-contraste: #ffffff;
+  --accent2: #5a8985;        /* teal secondaire */
+  /* Valeurs négatives / dépenses */
+  --negatif: #c74752;
+  --negatif-fond: #fcebed;
+  --negatif-texte: #9d3542;
+  /* Valeurs positives / revenus */
+  --positif: #37836c;
+  --positif-fond: #e7f3ee;
+  --positif-texte: #286a54;
+  /* Neutres */
+  --texte: #263746;          /* texte principal */
+  --discret: #718096;        /* texte secondaire */
+  --bord: #e3e8ef;           /* bordures et séparateurs */
+  /* Surbrillance « mois en cours / prévision » (statut, non décoratif) */
+  --encours: #c68a2b;
+
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--texte);
   background: var(--fond);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --fond: #14171f;
-    --carte: #1d212b;
-    --texte: #e7e9ee;
-    --discret: #9aa1b2;
-    --bord: #2c3240;
-    --accent: #7c9bff;
-    --negatif: #ff7b6b;
-    --positif: #5fd39a;
+    --fond: #0f141a;
+    --carte: #1a212b;
+    --accent: #5e92aa;
+    --accent-contraste: #0f141a;
+    --accent2: #7fb3ad;
+    --negatif: #e27782;
+    --negatif-fond: color-mix(in srgb, var(--negatif) 16%, var(--carte));
+    --negatif-texte: #f0a6ad;
+    --positif: #5fb894;
+    --positif-fond: color-mix(in srgb, var(--positif) 16%, var(--carte));
+    --positif-texte: #9fd9c2;
+    --texte: #e7ecf2;
+    --discret: #94a1b2;
+    --bord: #2a323e;
+    --encours: #d6a64e;
   }
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--fond); }
+/* Chiffres tabulaires partout : les montants s'alignent parfaitement en colonne. */
+body { margin: 0; background: var(--fond); font-variant-numeric: tabular-nums; }
 
 .centre { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
 
@@ -37,7 +67,7 @@ body { margin: 0; background: var(--fond); }
 
 .onglets { display: flex; gap: 4px; background: var(--carte); border: 1px solid var(--bord); border-radius: 10px; padding: 4px; }
 .onglets button { border: 0; background: none; padding: 8px 14px; border-radius: 7px; cursor: pointer; color: var(--texte); font: inherit; }
-.onglets button.actif { background: var(--accent); color: #fff; }
+.onglets button.actif { background: var(--accent); color: var(--accent-contraste); }
 
 button.lien { border: 0; background: none; color: var(--discret); cursor: pointer; font: inherit; text-decoration: underline; }
 
@@ -56,7 +86,8 @@ tr:last-child td { border-bottom: 0; }
 tr.cliquable { cursor: pointer; }
 tr.cliquable:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 
-.droite { text-align: right; }
+.droite { text-align: right; font-variant-numeric: tabular-nums; }
+td.droite, th.droite { font-weight: 500; }
 .nowrap { white-space: nowrap; }
 .negatif { color: var(--negatif); }
 .positif { color: var(--positif); }
@@ -67,9 +98,10 @@ tr.cliquable:hover td { background: color-mix(in srgb, var(--accent) 8%, transpa
 .connexion h1 { margin: 0 0 4px; font-size: 1.4rem; }
 
 label { display: grid; gap: 6px; font-size: 0.9rem; color: var(--discret); }
-input, select { font: inherit; padding: 9px 10px; border: 1px solid var(--bord); border-radius: 8px; background: var(--fond); color: var(--texte); min-width: 0; }
+input, select { font: inherit; padding: 9px 10px; border: 1px solid var(--bord); border-radius: 8px; background: var(--carte); color: var(--texte); min-width: 0; }
+input:focus, select:focus, button:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
 
-button.principal { font: inherit; padding: 10px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; }
+button.principal { font: inherit; padding: 10px; border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-contraste); cursor: pointer; }
 button.principal:disabled { opacity: 0.6; }
 
 .alerte { color: var(--negatif); margin: 0; }
@@ -93,7 +125,7 @@ button.principal:disabled { opacity: 0.6; }
 @media (prefers-color-scheme: dark) { .attention { color: #f0c05a; } }
 label.case { display: flex; align-items: center; gap: 8px; color: var(--texte); }
 tr.exclue td { opacity: 0.4; }
-tr.statut-confirmer td:first-child { box-shadow: inset 3px 0 0 #e0a800; }
+tr.statut-confirmer td:first-child { box-shadow: inset 3px 0 0 var(--encours); }
 tr.statut-aclasser td:first-child { box-shadow: inset 3px 0 0 var(--negatif); }
 tr.statut-corrige td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 td.poste select { width: 100%; min-width: 180px; }
@@ -125,7 +157,7 @@ tr.edition td { background: var(--fond); }
 .barre-bilan { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; }
 .barre-bilan label:first-child { min-width: 120px; }
 .tableau-bilan { padding: 0; }
-.tableau-bilan table { font-size: 0.85rem; }
+.tableau-bilan table { font-size: 0.875rem; }
 .tableau-bilan th, .tableau-bilan td { padding: 5px 8px; }
 .tableau-bilan .col-poste { position: sticky; left: 0; background: var(--carte); text-align: left; min-width: 170px; z-index: 1; }
 .tableau-bilan tbody th.col-poste { color: var(--texte); font-weight: 400; font-size: 0.85rem; border-bottom: 1px solid var(--bord); }
@@ -175,13 +207,13 @@ th.th-filtre { position: relative; white-space: nowrap; }
 .plus-moins:hover { border-color: var(--accent); }
 
 /* Prév & Targets */
-.tableau-bilan th.en-cours, .tableau-bilan td.en-cours { background: color-mix(in srgb, #e0a800 26%, transparent); }
-.tableau-bilan th.a-venir, .tableau-bilan td.a-venir { font-style: italic; background: color-mix(in srgb, #e0a800 7%, transparent); }
+.tableau-bilan th.en-cours, .tableau-bilan td.en-cours { background: color-mix(in srgb, var(--encours) 26%, transparent); }
+.tableau-bilan th.a-venir, .tableau-bilan td.a-venir { font-style: italic; background: color-mix(in srgb, var(--encours) 7%, transparent); }
 .tableau-bilan .col-prev { font-weight: 600; border-left: 1px solid var(--bord); }
-.legende-en-cours { background: color-mix(in srgb, #e0a800 30%, transparent); padding: 0 4px; border-radius: 4px; }
-.legende-a-venir { font-style: italic; background: color-mix(in srgb, #e0a800 10%, transparent); padding: 0 4px; border-radius: 4px; }
+.legende-en-cours { background: color-mix(in srgb, var(--encours) 30%, transparent); padding: 0 4px; border-radius: 4px; }
+.legende-a-venir { font-style: italic; background: color-mix(in srgb, var(--encours) 10%, transparent); padding: 0 4px; border-radius: 4px; }
 .pastille { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; line-height: 1.6;
-  background: color-mix(in srgb, #e0a800 25%, transparent); color: var(--texte); vertical-align: middle; }
+  background: color-mix(in srgb, var(--encours) 25%, transparent); color: var(--texte); vertical-align: middle; }
 .pastille.neutre { background: var(--fond); color: var(--discret); font-weight: 400; border: 1px solid var(--bord); }
 .tableau-prev button.modifier { margin-left: 8px; font-size: 0.78rem; }
 .tableau-prev tr.edition td { position: sticky; left: 0; }
@@ -227,17 +259,17 @@ table.table-synthese td:nth-child(3) { white-space: nowrap; }
 /* Prév & Targets : période (12 mois glissants / année civile) et comparaison un an avant */
 .bascule { display: inline-flex; border: 1px solid var(--bord); border-radius: 8px; overflow: hidden; }
 .bascule button { font: inherit; font-size: 0.88rem; border: 0; padding: 6px 12px; background: var(--fond); color: var(--texte); cursor: pointer; white-space: nowrap; }
-.bascule button.actif { background: var(--accent); color: #fff; }
+.bascule button.actif { background: var(--accent); color: var(--accent-contraste); }
 .tableau-bilan tr.bandeau th { text-align: center; font-weight: 600; color: var(--texte); border-bottom: 0; }
 .tableau-bilan tr.bandeau th.bandeau-periode { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .tableau-bilan tr.bandeau .sous-titre { font-weight: 400; font-size: 0.78rem; color: var(--discret); }
-.tableau-bilan .col-cmp { background: color-mix(in srgb, #3a9d5d 9%, transparent); }
+.tableau-bilan .col-cmp { background: color-mix(in srgb, var(--accent2) 9%, transparent); }
 .tableau-bilan .col-cmp.bord { border-left: 2px solid var(--bord); }
-.tableau-bilan tr.bandeau th.bandeau-cmp { background: color-mix(in srgb, #3a9d5d 14%, transparent); }
+.tableau-bilan tr.bandeau th.bandeau-cmp { background: color-mix(in srgb, var(--accent2) 14%, transparent); }
 .chips { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .chips .etiq { font-size: 0.72rem; color: var(--discret); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
 .chip { font: inherit; font-size: 0.82rem; border: 1px solid var(--bord); background: var(--fond); color: var(--texte); border-radius: 999px; padding: 4px 11px; cursor: pointer; }
-.chip.actif { background: color-mix(in srgb, #3a9d5d 16%, transparent); border-color: #3a9d5d; font-weight: 600; }
+.chip.actif { background: color-mix(in srgb, var(--accent2) 16%, transparent); border-color: var(--accent2); font-weight: 600; }
 .cmp-mois { display: block; font-size: 0.70rem; color: var(--discret); margin-top: 2px; font-weight: 400; font-style: normal; }
 .delta.pos { color: var(--positif); }
 .delta.neg { color: var(--negatif); }

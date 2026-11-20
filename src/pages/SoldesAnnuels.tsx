@@ -88,7 +88,7 @@ function Cellule({ valeur, auJour = false, fond }: { valeur: number; auJour?: bo
 function fondSolde(v: number, max: number): string | undefined {
   if (v === 0 || max === 0) return undefined;
   const force = Math.round(12 + 38 * Math.min(1, Math.abs(v) / max));
-  return `color-mix(in srgb, ${v > 0 ? "#2e9d5b" : "#d9443a"} ${force}%, transparent)`;
+  return `color-mix(in srgb, ${v > 0 ? "var(--positif)" : "var(--negatif)"} ${force}%, transparent)`;
 }
 
 export default function SoldesAnnuels() {
