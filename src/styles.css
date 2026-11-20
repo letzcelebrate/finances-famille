@@ -175,12 +175,11 @@ th.th-filtre { position: relative; white-space: nowrap; }
 .plus-moins:hover { border-color: var(--accent); }
 
 /* Prév & Targets */
-.tableau-bilan th.en-cours, .tableau-bilan td.en-cours { background: color-mix(in srgb, #e0a800 14%, transparent); }
-.tableau-bilan td.a-venir { font-style: italic; opacity: 0.75; }
-.tableau-bilan th.a-venir { font-style: italic; }
+.tableau-bilan th.en-cours, .tableau-bilan td.en-cours { background: color-mix(in srgb, #e0a800 26%, transparent); }
+.tableau-bilan th.a-venir, .tableau-bilan td.a-venir { font-style: italic; background: color-mix(in srgb, #e0a800 7%, transparent); }
 .tableau-bilan .col-prev { font-weight: 600; border-left: 1px solid var(--bord); }
-.legende-en-cours { background: color-mix(in srgb, #e0a800 20%, transparent); padding: 0 4px; border-radius: 4px; }
-.legende-a-venir { font-style: italic; }
+.legende-en-cours { background: color-mix(in srgb, #e0a800 30%, transparent); padding: 0 4px; border-radius: 4px; }
+.legende-a-venir { font-style: italic; background: color-mix(in srgb, #e0a800 10%, transparent); padding: 0 4px; border-radius: 4px; }
 .pastille { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; line-height: 1.6;
   background: color-mix(in srgb, #e0a800 25%, transparent); color: var(--texte); vertical-align: middle; }
 .pastille.neutre { background: var(--fond); color: var(--discret); font-weight: 400; border: 1px solid var(--bord); }
@@ -224,3 +223,15 @@ table.table-synthese td:nth-child(3) { white-space: nowrap; }
 .liste-cases.annees { grid-template-columns: repeat(3, 1fr); max-height: 220px; }
 .barre-bilan { overflow: visible; }
 .liste-cases.annees label.case { min-width: 0; }
+
+/* Prév & Targets : période (12 mois glissants / année civile) et comparaison un an avant */
+.bascule { display: inline-flex; border: 1px solid var(--bord); border-radius: 8px; overflow: hidden; }
+.bascule button { font: inherit; font-size: 0.88rem; border: 0; padding: 6px 12px; background: var(--fond); color: var(--texte); cursor: pointer; white-space: nowrap; }
+.bascule button.actif { background: var(--accent); color: #fff; }
+.tableau-bilan tr.bandeau th { text-align: center; font-weight: 600; color: var(--texte); border-bottom: 0; }
+.tableau-bilan tr.bandeau th.bandeau-periode { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.tableau-bilan tr.bandeau .sous-titre { font-weight: 400; font-size: 0.78rem; color: var(--discret); }
+.tableau-bilan .col-an-avant, .tableau-bilan .col-an-avant-moy { background: color-mix(in srgb, #3a9d5d 9%, transparent); }
+.tableau-bilan .col-an-avant { border-left: 2px solid var(--bord); }
+.tableau-bilan td.col-moy { color: var(--discret); }
+.tableau-bilan td.col-moy.negatif { color: color-mix(in srgb, var(--negatif) 75%, var(--discret)); }

@@ -139,6 +139,12 @@ l'application pourra donc reconnaître le compte toute seule.
   (mois précis seulement si la dépense revient au même mois l'année d'avant) ;
   une pastille « à revoir » signale un objectif qui ne correspond plus aux
   12 derniers mois, sans jamais le modifier automatiquement.
+- Prév & Targets, période affichée : « 12 mois glissants » par défaut (les
+  6 mois avant le mois en cours, le mois en cours, les 5 mois suivants), ou
+  « Année civile » (janvier à décembre de l'année en cours). Comparaison
+  toujours avec le réel des mêmes 12 mois un an plus tôt (total et moyenne
+  par mois), affichée tout à droite. Mois en cours sur fond jaune soutenu,
+  mois suivants sur fond jaune très pâle.
 
 - Soldes annuels (format de l'onglet Excel) : une ligne par type de compte
   (Courant = comptes courants + cartes + cash, Epargne, Retraite, Titres),

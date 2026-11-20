@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { aRevoir, cleMois, prevoirPoste, reference, suggererObjectif, TOUS_LES_MOIS, type Historique, type Objectif } from "../previsionnel";
+import {
+  aRevoir, cleMois, periode, prevoirPoste, reference, statut, suggererObjectif, TOUS_LES_MOIS, unAnAvant,
+  type Historique, type Objectif,
+} from "../previsionnel";
 
 /** Historique fictif : fonction (annee, mois) -> [nb, total] ou null */
 function histo(f: (annee: number, mois: number) => [number, number] | null): Historique {
@@ -67,19 +70,52 @@ describe("aRevoir", () => {
 });
 
 describe("reference (date du dernier import)", () => {
-  it("milieu de mois", () => expect(reference(2026, "2026-11-15")).toEqual({ mois: 11, fraction: 0.5 }));
-  it("année passée : tout est réel", () => expect(reference(2025, "2026-11-15").mois).toBe(13));
-  it("année à venir : rien n'est passé", () => expect(reference(2027, "2026-11-15")).toEqual({ mois: 1, fraction: 0 }));
+  it("milieu de mois", () => expect(reference("2026-11-15")).toEqual({ annee: 2026, mois: 11, fraction: 0.5 }));
+  it("sans import : date du jour", () => expect(reference(null, new Date(2026, 1, 14))).toEqual({ annee: 2026, mois: 2, fraction: 0.5 }));
+});
+
+describe("periode", () => {
+  const ref = { annee: 2026, mois: 11 };
+  const jour = new Date(2026, 10, 20);
+  it("12 mois glissants : mai 2026 → avril 2027", () => {
+    const p = periode("glissant", ref, jour);
+    expect(p).toHaveLength(12);
+    expect(p[0]).toEqual({ annee: 2026, mois: 5 });
+    expect(p[6]).toEqual({ annee: 2026, mois: 11 });
+    expect(p[11]).toEqual({ annee: 2027, mois: 4 });
+  });
+  it("glissant en février : août de l'année d'avant → juillet", () => {
+    const p = periode("glissant", { annee: 2027, mois: 2 }, jour);
+    expect(p[0]).toEqual({ annee: 2026, mois: 8 });
+    expect(p[11]).toEqual({ annee: 2027, mois: 7 });
+  });
+  it("année civile : janvier → décembre de l'année du jour", () => {
+    const p = periode("civile", ref, jour);
+    expect(p[0]).toEqual({ annee: 2026, mois: 1 });
+    expect(p[11]).toEqual({ annee: 2026, mois: 12 });
+  });
+  it("un an avant : mai 2025 → avril 2026", () => {
+    const p = unAnAvant(periode("glissant", ref, jour));
+    expect(p[0]).toEqual({ annee: 2025, mois: 5 });
+    expect(p[11]).toEqual({ annee: 2026, mois: 4 });
+  });
+  it("statut des mois", () => {
+    expect(statut({ annee: 2026, mois: 10 }, ref)).toBe("passe");
+    expect(statut({ annee: 2026, mois: 11 }, ref)).toBe("en-cours");
+    expect(statut({ annee: 2027, mois: 1 }, ref)).toBe("a-venir");
+    expect(statut({ annee: 2025, mois: 12 }, ref)).toBe("passe");
+  });
 });
 
 describe("prevoirPoste", () => {
   const zeros = new Array(12).fill(0);
-  const ref = { mois: 11, fraction: 0.5 }; // 15 novembre
+  const ref = { annee: 2026, mois: 11, fraction: 0.5 }; // 15 novembre
+  const civile = TOUS_LES_MOIS.map((mois) => ({ annee: 2026, mois }));
   const reel = (nov: number) => zeros.map((_, i) => (i < 10 ? -900 : i === 10 ? nov : 0));
 
   it("variable : l'exemple des 1 100 € (1 000 prévus, 600 dépensés à mi-mois)", () => {
     const o: Objectif = { poste_id: 1, mode: "variable", montant: -1000, nb_operations: 1, mois: TOUS_LES_MOIS };
-    const p = prevoirPoste(o, reel(-600), zeros, ref);
+    const p = prevoirPoste(o, civile, reel(-600), zeros, ref);
     expect(p.prevision[9]).toBe(-900); // octobre : réel
     expect(p.prevision[10]).toBe(-1100); // novembre : 600 + 1000 × 0,5
     expect(p.prevision[11]).toBe(-1000); // décembre : objectif
@@ -89,21 +125,32 @@ describe("prevoirPoste", () => {
   it("régulier : 2 crédits sur 3 passés -> on ajoute le 3e ; 3 passés -> réel seul", () => {
     const o: Objectif = { poste_id: 1, mode: "regulier", montant: -1237, nb_operations: 3, mois: TOUS_LES_MOIS };
     const nb = zeros.map((_, i) => (i === 10 ? 2 : 0));
-    expect(prevoirPoste(o, reel(-2474), nb, ref).prevision[10]).toBe(-3711);
+    expect(prevoirPoste(o, civile, reel(-2474), nb, ref).prevision[10]).toBe(-3711);
     const nb3 = zeros.map((_, i) => (i === 10 ? 3 : 0));
-    expect(prevoirPoste(o, reel(-3711), nb3, ref).prevision[10]).toBe(-3711);
-    expect(prevoirPoste(o, reel(-3711), nb3, ref).prevision[11]).toBe(-3711);
+    expect(prevoirPoste(o, civile, reel(-3711), nb3, ref).prevision[10]).toBe(-3711);
+    expect(prevoirPoste(o, civile, reel(-3711), nb3, ref).prevision[11]).toBe(-3711);
   });
 
   it("certains mois seulement : rien prévu les autres mois", () => {
     const o: Objectif = { poste_id: 1, mode: "regulier", montant: -2000, nb_operations: 1, mois: [5, 12] };
-    const p = prevoirPoste(o, zeros, zeros, ref);
+    const p = prevoirPoste(o, civile, zeros, zeros, ref);
     expect(p.prevision[10]).toBe(0);
     expect(p.prevision[11]).toBe(-2000);
     expect(p.objectif).toEqual([0, 0, 0, 0, -2000, 0, 0, 0, 0, 0, 0, -2000]);
   });
 
+  it("12 mois glissants : objectifs de l'année suivante pris au bon mois", () => {
+    const o: Objectif = { poste_id: 1, mode: "regulier", montant: -2000, nb_operations: 1, mois: [3] };
+    const per = periode("glissant", ref, new Date(2026, 10, 20)); // mai 2026 → avril 2027
+    const reelPer = zeros.map((_, i) => (i < 6 ? -10 : 0));
+    const p = prevoirPoste(o, per, reelPer, zeros, ref);
+    expect(p.prevision.slice(0, 6)).toEqual([-10, -10, -10, -10, -10, -10]); // mai → oct. : réel
+    expect(p.prevision[10]).toBe(-2000); // mars 2027
+    expect(p.objectif[10]).toBe(-2000);
+    expect(p.prevision[11]).toBe(0);
+  });
+
   it("sans objectif : réel seulement", () => {
-    expect(prevoirPoste(null, reel(-50), zeros, ref).prevision[10]).toBe(-50);
+    expect(prevoirPoste(null, civile, reel(-50), zeros, ref).prevision[10]).toBe(-50);
   });
 });

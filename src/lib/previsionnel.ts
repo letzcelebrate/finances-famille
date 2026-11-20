@@ -108,38 +108,69 @@ export function aRevoir(o: Objectif, s: Objectif | null): boolean {
   return ecart > 10 && ecart > 0.15 * Math.abs(o.montant);
 }
 
+/** Un mois précis : année + mois (1 = janvier … 12 = décembre). */
+export type MoisAbs = { annee: number; mois: number };
+/** Mois en cours (d'après le dernier import) et part de ce mois déjà écoulée. */
+export type Reference = MoisAbs & { fraction: number };
+export type Vue = "glissant" | "civile";
+export type Statut = "passe" | "en-cours" | "a-venir";
+
 /**
  * Point de référence : le mois en cours et la part de ce mois déjà écoulée,
  * d'après la date du dernier import (pas la date du jour).
  */
-export function reference(annee: number, derniereDate: string | null, aujourdhui: Date = new Date()): { mois: number; fraction: number } {
+export function reference(derniereDate: string | null, aujourdhui: Date = new Date()): Reference {
   const d = derniereDate ? new Date(`${derniereDate}T12:00:00`) : aujourdhui;
-  if (d.getFullYear() < annee) return { mois: 1, fraction: 0 };
-  if (d.getFullYear() > annee) return { mois: 13, fraction: 0 }; // année terminée : tout est réel
-  const jours = new Date(annee, d.getMonth() + 1, 0).getDate();
-  return { mois: d.getMonth() + 1, fraction: d.getDate() / jours };
+  const jours = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  return { annee: d.getFullYear(), mois: d.getMonth() + 1, fraction: d.getDate() / jours };
+}
+
+/** Le mois décalé de n mois (n négatif = vers le passé). */
+export function decaler(m: MoisAbs, n: number): MoisAbs {
+  const d = new Date(m.annee, m.mois - 1 + n, 1);
+  return { annee: d.getFullYear(), mois: d.getMonth() + 1 };
 }
 
 /**
- * Prévision d'un poste pour l'année.
- * reel[i] et nbPasses[i] : montant réel et nombre d'opérations déjà passées au mois i+1.
+ * Les 12 mois affichés.
+ * - glissant : les 6 mois qui précèdent le mois en cours, le mois en cours, puis les 5 suivants ;
+ * - civile : janvier à décembre de l'année en cours (année du jour).
+ */
+export function periode(vue: Vue, ref: MoisAbs, aujourdhui: Date = new Date()): MoisAbs[] {
+  const debut = vue === "glissant" ? decaler(ref, -6) : { annee: aujourdhui.getFullYear(), mois: 1 };
+  return TOUS_LES_MOIS.map((_, i) => decaler(debut, i));
+}
+
+/** Les mêmes 12 mois, un an plus tôt. */
+export const unAnAvant = (p: MoisAbs[]): MoisAbs[] => p.map((m) => ({ annee: m.annee - 1, mois: m.mois }));
+
+export function statut(m: MoisAbs, ref: MoisAbs): Statut {
+  const a = m.annee * 12 + m.mois, r = ref.annee * 12 + ref.mois;
+  return a < r ? "passe" : a === r ? "en-cours" : "a-venir";
+}
+
+/**
+ * Prévision d'un poste sur une période de 12 mois.
+ * reel[i] et nbPasses[i] : montant réel et nombre d'opérations déjà passées au mois periode[i].
  * Mois passés : réel. Mois en cours et à venir :
  *   - régulier : réel + opérations encore attendues × montant habituel ;
  *   - variable : réel + objectif × part du mois qui reste.
  */
 export function prevoirPoste(
   o: Objectif | null,
+  per: MoisAbs[],
   reel: number[],
   nbPasses: number[],
-  ref: { mois: number; fraction: number },
+  ref: Reference,
 ): { prevision: number[]; objectif: number[] } {
-  const prevision = reel.map((r, i) => {
-    const m = i + 1;
-    if (m < ref.mois || !o || !o.mois.includes(m)) return r;
+  const prevision = per.map((m, i) => {
+    const r = reel[i] ?? 0;
+    const st = statut(m, ref);
+    if (st === "passe" || !o || !o.mois.includes(m.mois)) return r;
     if (o.mode === "regulier") return arrondi(r + Math.max(0, o.nb_operations - (nbPasses[i] ?? 0)) * o.montant);
-    const reste = m === ref.mois ? 1 - ref.fraction : 1;
+    const reste = st === "en-cours" ? 1 - ref.fraction : 1;
     return arrondi(r + o.montant * reste);
   });
-  const objectif = TOUS_LES_MOIS.map((m) => (o ? montantDuMois(o, m) : 0));
+  const objectif = per.map((m) => (o ? montantDuMois(o, m.mois) : 0));
   return { prevision, objectif };
 }
