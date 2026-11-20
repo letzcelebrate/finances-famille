@@ -92,6 +92,8 @@ l'application pourra donc reconnaître le compte toute seule.
 - [ ] **Étape 6** — Mise en ligne sur Netlify avec connexion obligatoire.
   En cours : site Netlify privé (équipe « Famille Giraud », compte familial),
   mis à jour à la main en glissant le dossier `dist` dans l'onglet Deploys.
+  Adresse : https://financesgiraldo.netlify.app (Supabase > Authentication >
+  URL Configuration : Site URL réglé sur cette adresse).
 
 ## Questions ouvertes
 
