@@ -137,3 +137,7 @@ tr.edition td { background: var(--fond); }
 .tableau-bilan td.vide { color: var(--discret); opacity: 0.5; }
 .app.large { max-width: 1600px; }
 .tableau-bilan tr.sous-total th.col-poste { background: color-mix(in srgb, var(--accent) 5%, var(--carte)); }
+
+/* Synthèse : patrimoine disponible sous le total */
+.total .sous-total-patrimoine { flex-basis: 100%; text-align: right; color: var(--discret); font-size: 0.9rem; }
+.total .sous-total-patrimoine strong { font-size: 1rem; color: var(--texte); }

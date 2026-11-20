@@ -1,24 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { formatDate, formatMontant } from "../lib/format";
-
-type Solde = {
-  compte_id: number;
-  banque: string;
-  nom: string;
-  type_compte: string;
-  devise: string;
-  ouvert: boolean;
-  solde: number;
-  derniere_operation: string | null;
-};
-
-const GROUPES: { titre: string; types: string[] }[] = [
-  { titre: "Comptes courants", types: ["Courant", "Cash"] },
-  { titre: "Cartes bancaires", types: ["Carte Bancaire"] },
-  { titre: "Épargne", types: ["Epargne", "Titres"] },
-  { titre: "Retraite", types: ["Retraite"] },
-];
+import { construireSynthese, type Solde } from "../lib/synthese";
 
 export default function Synthese({ onChoisirCompte }: { onChoisirCompte: (id: number) => void }) {
   const [soldes, setSoldes] = useState<Solde[] | null>(null);
@@ -40,18 +23,20 @@ export default function Synthese({ onChoisirCompte }: { onChoisirCompte: (id: nu
   if (erreur) return <p className="alerte">Erreur : {erreur}</p>;
   if (!soldes) return <p>Chargement…</p>;
 
-  const total = soldes.reduce((t, s) => t + s.solde, 0);
+  const { blocs, total, disponible } = construireSynthese(soldes);
 
   return (
     <section>
       <div className="carte total">
         <span>Patrimoine total (comptes ouverts)</span>
         <strong>{formatMontant(total)}</strong>
+        <span className="sous-total-patrimoine">
+          Patrimoine disponible (hors retraite) : <strong>{formatMontant(disponible)}</strong>
+        </span>
       </div>
-      {GROUPES.map((g) => {
-        const lignes = soldes.filter((s) => g.types.includes(s.type_compte));
-        if (lignes.length === 0) return null;
-        const sousTotal = lignes.reduce((t, s) => t + s.solde, 0);
+      {blocs.map((g) => {
+        const lignes = g.comptes;
+        const sousTotal = g.total;
         return (
           <div key={g.titre} className="carte">
             <div className="groupe-titre">
