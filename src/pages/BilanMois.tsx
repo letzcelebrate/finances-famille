@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { moisPourMoyenne, moyenne, organiserBilan, type Bilan, type BlocCategorie, type LigneBilanBrute, type Montants } from "../lib/bilan";
+import { moisPourMoyenne, moyenneMensuelle, organiserBilan, type Bilan, type BlocCategorie, type LigneBilanBrute, type Montants } from "../lib/bilan";
 
 const MOIS_COURTS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 const nombre = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -18,7 +18,7 @@ function Ligne({ nom, montants, nbMois, classe }: { nom: string; montants: Monta
         <Cellule key={i} valeur={v} />
       ))}
       <Cellule valeur={montants.total} />
-      <Cellule valeur={moyenne(montants.total, nbMois)} />
+      <Cellule valeur={moyenneMensuelle(montants, nbMois)} />
     </tr>
   );
 }
@@ -87,7 +87,12 @@ export default function BilanMois() {
           Afficher le détail des postes
         </label>
         <span className="sous">
-          Mois de rattachement · moyenne sur {nbMois} mois{nbMois < 12 ? " (année en cours)" : ""}
+          Mois de rattachement ·{" "}
+          {nbMois === 12
+            ? "moyenne sur 12 mois"
+            : nbMois === 0
+              ? "moyenne disponible à la fin du premier mois"
+              : `moyenne sur ${nbMois} mois terminé${nbMois > 1 ? "s" : ""} (mois en cours non compté)`}
         </span>
       </div>
 

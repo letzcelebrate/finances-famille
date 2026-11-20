@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moisPourMoyenne, moyenne, organiserBilan, type LigneBilanBrute } from "../bilan";
+import { moisPourMoyenne, moyenneMensuelle, organiserBilan, type LigneBilanBrute } from "../bilan";
 
 function ligne(categorie: string | null, poste: string | null, mois: Record<number, number>): LigneBilanBrute {
   const l: any = { categorie_id: 1, categorie, categorie_rang: 1, poste_id: 1, poste, poste_ordre: 1 };
@@ -50,10 +50,24 @@ describe("organiserBilan", () => {
 
 describe("moyenne mensuelle", () => {
   const ref = new Date(2026, 10, 15); // 15 novembre 2026
+  const m = (mois: number[]) => ({ mois, total: mois.reduce((a, b) => a + b, 0) });
+
   it("divise par 12 pour une année passée", () => expect(moisPourMoyenne(2025, ref)).toBe(12));
-  it("divise par les mois entamés pour l'année en cours", () => expect(moisPourMoyenne(2026, ref)).toBe(11));
-  it("calcule la moyenne arrondie au centime", () => {
-    expect(moyenne(-1000, 3)).toBe(-333.33);
-    expect(moyenne(100, 0)).toBe(0);
+  it("ne compte que les mois terminés pour l'année en cours", () => {
+    expect(moisPourMoyenne(2026, ref)).toBe(10);
+    expect(moisPourMoyenne(2026, new Date(2026, 0, 20))).toBe(0);
+    expect(moisPourMoyenne(2026, new Date(2026, 11, 31))).toBe(11);
+  });
+  it("exclut le mois en cours du calcul", () => {
+    // 10 mois terminés à -100, novembre en cours à -40
+    const montants = m([-100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -40, 0]);
+    expect(moyenneMensuelle(montants, 10)).toBe(-100);
+  });
+  it("divise par 12 sur une année complète, arrondi au centime", () => {
+    expect(moyenneMensuelle(m([100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 12)).toBe(8.33);
+    expect(moyenneMensuelle(m([-1000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 3)).toBe(-333.33);
+  });
+  it("renvoie 0 quand aucun mois n'est terminé", () => {
+    expect(moyenneMensuelle(m([50, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 0)).toBe(0);
   });
 });

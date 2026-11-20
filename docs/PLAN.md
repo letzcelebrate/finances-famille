@@ -123,8 +123,8 @@ l'application pourra donc reconnaître le compte toute seule.
   (vue `v_lignes_analyse`).
 
 - Bilan par mois : mois de rattachement ; une ligne par poste, sous-total par
-  catégorie ; moyenne mensuelle = total ÷ 12 pour une année passée, ÷ nombre de
-  mois entamés pour l'année en cours ; la ligne « Résultat » exclut les Neutres
+  catégorie ; moyenne mensuelle = total ÷ 12 pour une année passée ; pour l'année
+  en cours, moyenne des seuls mois terminés (le mois en cours n'est pas compté) ; la ligne « Résultat » exclut les Neutres
   (virements entre comptes), affichés à part ; les opérations sans poste
   apparaissent dans « À classer ». Totaux calculés dans la base (fonction
   `bilan_par_mois`).

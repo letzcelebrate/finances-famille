@@ -72,15 +72,19 @@ export function organiserBilan(lignes: LigneBilanBrute[]): Bilan {
 
 /**
  * Nombre de mois servant à la moyenne mensuelle :
- * 12 pour une année passée, le nombre de mois entamés pour l'année en cours.
+ * 12 pour une année passée ; pour l'année en cours, les mois terminés
+ * seulement (le mois en cours, incomplet, n'entre pas dans la moyenne).
  */
 export function moisPourMoyenne(annee: number, aujourdhui: Date = new Date()): number {
   const anneeCourante = aujourdhui.getFullYear();
   if (annee < anneeCourante) return 12;
   if (annee > anneeCourante) return 0;
-  return aujourdhui.getMonth() + 1;
+  return aujourdhui.getMonth(); // janvier = 0 mois terminé, novembre = 10
 }
 
-export function moyenne(total: number, nbMois: number): number {
-  return nbMois > 0 ? Math.round((total / nbMois) * 100) / 100 : 0;
+/** Moyenne mensuelle sur les nbMois premiers mois (mois terminés), arrondie au centime. */
+export function moyenneMensuelle(montants: Montants, nbMois: number): number {
+  if (nbMois <= 0) return 0;
+  const centimesTotal = montants.mois.slice(0, nbMois).reduce((t, v) => t + Math.round(v * 100), 0);
+  return Math.round(centimesTotal / nbMois) / 100;
 }
