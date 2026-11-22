@@ -217,6 +217,10 @@ th.th-filtre { position: relative; white-space: nowrap; }
 .pastille.neutre { background: var(--fond); color: var(--discret); font-weight: 400; border: 1px solid var(--bord); }
 .tableau-prev button.modifier { margin-left: 8px; font-size: 0.78rem; }
 .tableau-prev tr.edition td { position: sticky; left: 0; }
+/* Resserrage pour que le tableau tienne sur la largeur de l'écran (scroll de secours conservé). */
+.tableau-prev table { font-size: 0.8rem; }
+.tableau-prev th, .tableau-prev td { padding: 4px 6px; }
+.tableau-prev .col-poste { min-width: 150px; }
 .choix-mois { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
 label.en-ligne { display: inline-flex; align-items: center; gap: 6px; color: var(--texte); }
 

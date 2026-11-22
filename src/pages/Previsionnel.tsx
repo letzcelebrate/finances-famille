@@ -22,6 +22,8 @@ const arr = (n: number) => Math.round(n * 100) / 100;
 const moyenne = (total: number) => Math.round((total / 12) * 100) / 100;
 // Années de comparaison proposées : 1, 2 ou 3 ans avant la période affichée.
 const DECALAGES = [1, 2, 3];
+// Comparaison fixée automatiquement à l'année précédente (N-1).
+const COMPARAISON_AUTO = new Set([1]);
 
 type LigneHisto = { poste_id: number; mois: string[]; nb: number[]; total: (number | string)[] };
 
@@ -90,8 +92,7 @@ export default function Previsionnel() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const [vue, setVue] = useState<Vue>("glissant");
-  const [decalages, setDecalages] = useState<Set<number>>(new Set([1]));
-  const [parMois, setParMois] = useState(true);
+  const decalages = COMPARAISON_AUTO;
   const [ouvertes, setOuvertes] = useState<Set<string>>(new Set());
   const [edition, setEdition] = useState<number | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -244,14 +245,6 @@ export default function Previsionnel() {
   const fenetreAvant = (dec: number) => ilYaNAns(per, dec);
   const NB_COLONNES = 17 + 2 * comparaisons.length; // poste + 12 mois + prévision, moy., objectif, écart + 2 par année comparée
 
-  const basculerDecalage = (n: number) =>
-    setDecalages((d) => {
-      const s = new Set(d);
-      if (s.has(n)) s.delete(n);
-      else s.add(n);
-      return s;
-    });
-
   const toutes = [...prev.categories, ...(prev.neutres ? [prev.neutres] : [])].map((c) => c.nom);
   const toutOuvert = toutes.length > 0 && toutes.every((n) => ouvertes.has(n));
   const basculer = (nom: string) =>
@@ -269,8 +262,7 @@ export default function Previsionnel() {
       <tr className={classe}>
         <th scope="row" className="col-poste">{debut}{nom}{apres}</th>
         {p.mois.map((v, i) => (
-          <CelluleMois key={i} valeur={v} classe={classeMois(i)}
-            cmp={parMois && cmps.length > 0 ? cmps[0].mois[i] : undefined} />
+          <CelluleMois key={i} valeur={v} classe={classeMois(i)} />
         ))}
         <Cellule valeur={p.total} classe="col-prev" />
         <Cellule valeur={moyenne(p.total)} classe="col-moy" />
@@ -353,21 +345,6 @@ export default function Previsionnel() {
             Année civile {donnees.jour.getFullYear()}
           </button>
         </span>
-        <span className="chips" role="group" aria-label="Années comparées">
-          <span className="etiq">Comparer avec</span>
-          {DECALAGES.map((n) => {
-            const actif = decalages.has(n);
-            return (
-              <button type="button" key={n} className={`chip ${actif ? "actif" : ""}`} aria-pressed={actif} onClick={() => basculerDecalage(n)}>
-                {anneeComparee(n)}{actif ? " ✓" : ""}
-              </button>
-            );
-          })}
-        </span>
-        <label className="case">
-          <input type="checkbox" checked={parMois} onChange={(e) => setParMois(e.target.checked)} />
-          Comparer chaque mois
-        </label>
         <label className="case">
           <input type="checkbox" checked={toutOuvert} onChange={(e) => setOuvertes(new Set(e.target.checked ? toutes : []))} />
           Afficher le détail des postes
