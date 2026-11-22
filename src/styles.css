@@ -394,3 +394,25 @@ table.table-synthese td:nth-child(3) { white-space: nowrap; }
 .calc-ico { border: 1px solid var(--bord); background: var(--carte); border-radius: 8px; padding: 6px; cursor: pointer; color: var(--accent); line-height: 0; }
 .calc-ico:hover { background: color-mix(in srgb, var(--accent) 10%, var(--carte)); }
 .popover-actions { display: flex; gap: 10px; align-items: center; margin-top: 2px; }
+
+/* Raccourcis de saisie Cash */
+.raccourcis-cash { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 12px; }
+.raccourci-chip { display: inline-flex; align-items: stretch; border: 1px solid var(--bord); border-radius: 999px; overflow: hidden; background: var(--fond); }
+.raccourci-chip .chip-appliquer { border: 0; background: none; padding: 7px 12px; cursor: pointer; font: inherit; color: var(--texte); }
+.raccourci-chip .chip-appliquer:hover { background: color-mix(in srgb, var(--accent) 12%, var(--fond)); }
+.raccourci-chip .chip-suppr { border: 0; border-left: 1px solid var(--bord); background: none; padding: 0 10px; cursor: pointer; color: var(--discret); font-size: 1.05rem; line-height: 1; }
+.raccourci-chip .chip-suppr:hover { color: var(--negatif); background: color-mix(in srgb, var(--negatif) 10%, transparent); }
+.actions-cash { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+
+/* Cash : sélecteur visuel Dépense / Entrée */
+.sens-cash { display: flex; gap: 10px; margin-bottom: 14px; }
+.sens-cash button { flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; font: inherit; font-weight: 600;
+  border: 2px solid var(--bord); border-radius: 10px; background: var(--carte); color: var(--discret); cursor: pointer; }
+.sens-cash .sens-mot { font-weight: 400; font-size: 0.85rem; color: var(--discret); }
+.sens-cash .sens-signe { font-size: 1.25rem; line-height: 1; }
+.sens-cash .sens-depense.actif { border-color: var(--negatif); background: color-mix(in srgb, var(--negatif) 12%, var(--carte)); color: var(--negatif); }
+.sens-cash .sens-depense.actif .sens-mot { color: var(--negatif); }
+.sens-cash .sens-entree.actif { border-color: var(--positif); background: color-mix(in srgb, var(--positif) 14%, var(--carte)); color: var(--positif); }
+.sens-cash .sens-entree.actif .sens-mot { color: var(--positif); }
+.montant-cash.depense { border-color: color-mix(in srgb, var(--negatif) 45%, var(--bord)); }
+.montant-cash.entree { border-color: color-mix(in srgb, var(--positif) 45%, var(--bord)); }

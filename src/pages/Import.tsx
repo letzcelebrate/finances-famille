@@ -20,6 +20,7 @@ import {
 import { EditeurDivision, partsInitiales, partsValides, SelectPoste, usePostes, type Part } from "../components/Classement";
 import { useEstMobile } from "../lib/mobile";
 import { ChampDate } from "../components/ChampDate";
+import { ajouterRaccourci, chargerRaccourcis, supprimerRaccourci, type RaccourciCash } from "../lib/raccourcisCash";
 
 type Ligne = {
   cle: number;
@@ -63,15 +64,50 @@ export default function Import() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   })();
-  const [cash, setCash] = useState<{ date: string; libelle: string; montant: string; poste_id: number | null; compte_id: number | "" }>(
-    { date: aujourdhui, libelle: "", montant: "", poste_id: null, compte_id: "" },
+  const [cash, setCash] = useState<{ date: string; libelle: string; montant: string; poste_id: number | null; compte_id: number | ""; sens: "depense" | "entree" }>(
+    { date: aujourdhui, libelle: "", montant: "", poste_id: null, compte_id: "", sens: "depense" },
   );
   const [cashEnvoi, setCashEnvoi] = useState(false);
   const [cashMsg, setCashMsg] = useState<string | null>(null);
+  const [raccourcis, setRaccourcis] = useState<RaccourciCash[]>([]);
 
   useEffect(() => {
     chargerComptes().then(setComptes).catch((e) => setErreur(e.message));
+    chargerRaccourcis().then(setRaccourcis).catch((e) => setErreur(e.message));
   }, []);
+
+  function appliquerRaccourci(r: RaccourciCash) {
+    setCashMsg(null);
+    setCash((c) => ({
+      ...c,
+      libelle: r.libelle,
+      poste_id: r.poste_id,
+      sens: r.montant !== null ? (r.montant >= 0 ? "entree" : "depense") : c.sens,
+      montant: r.montant !== null ? String(Math.abs(r.montant)).replace(".", ",") : c.montant,
+    }));
+  }
+
+  async function enregistrerRaccourci() {
+    const magnitude = Math.round(Number((cash.montant || "").replace(",", ".")) * 100) / 100;
+    const libelle = cash.libelle.trim();
+    if (libelle === "" || cash.poste_id === null) return;
+    const montantSigne = magnitude > 0 ? (cash.sens === "entree" ? magnitude : -magnitude) : null;
+    try {
+      const r = await ajouterRaccourci(libelle, cash.poste_id, montantSigne);
+      setRaccourcis((rs) => [...rs, r]);
+    } catch (e) {
+      setErreur((e as Error).message);
+    }
+  }
+
+  async function retirerRaccourci(id: number) {
+    try {
+      await supprimerRaccourci(id);
+      setRaccourcis((rs) => rs.filter((r) => r.id !== id));
+    } catch (e) {
+      setErreur((e as Error).message);
+    }
+  }
 
   // cartes de la même banque, encore ouvertes (destinataires possibles d'un décompte Visa)
   const cartesDe = (compte: CompteImport) =>
@@ -208,9 +244,10 @@ export default function Import() {
     const cashOuverts = comptes.filter((c) => c.ouvert && c.type_compte === "Cash");
     const compteId = cash.compte_id !== "" ? cash.compte_id : (cashOuverts.length === 1 ? cashOuverts[0].id : null);
     const compte = comptes.find((c) => c.id === compteId);
-    const montant = -(Math.round(Number((cash.montant || "").replace(",", ".")) * 100) / 100);
+    const magnitude = Math.round(Number((cash.montant || "").replace(",", ".")) * 100) / 100;
+    const montant = (cash.sens === "entree" ? 1 : -1) * magnitude;
     const libelle = cash.libelle.trim();
-    if (!compte || !(montant < 0) || libelle === "" || cash.poste_id === null || !cash.date) return;
+    if (!compte || !(magnitude > 0) || libelle === "" || cash.poste_id === null || !cash.date) return;
     setCashEnvoi(true);
     setErreur(null);
     setCashMsg(null);
@@ -226,10 +263,10 @@ export default function Import() {
         ventilations: [],
         empreinte: empreinte(cash.date, libelle, montant),
       }]);
-      setCashMsg(`Dépense enregistrée : ${formatMontant(montant, compte.devise)} — ${libelle}.`);
-      setCash({ date: aujourdhui, libelle: "", montant: "", poste_id: null, compte_id: cash.compte_id });
+      setCashMsg(`${cash.sens === "entree" ? "Entrée" : "Dépense"} enregistrée : ${formatMontant(montant, compte.devise)} — ${libelle}.`);
+      setCash({ date: aujourdhui, libelle: "", montant: "", poste_id: null, compte_id: cash.compte_id, sens: cash.sens });
     } catch (e) {
-      setErreur(`L'enregistrement de la dépense en espèces a échoué. (${(e as Error).message})`);
+      setErreur(`L'enregistrement de l'opération en espèces a échoué. (${(e as Error).message})`);
     } finally {
       setCashEnvoi(false);
     }
@@ -277,17 +314,40 @@ export default function Import() {
 
           {cashComptes.length > 0 && (
             <div className="carte">
-              <h2>Saisir une dépense en espèces</h2>
+              <h2>Saisir une opération en espèces</h2>
               <p className="sous">Enregistrée sur le compte Cash ; elle apparaîtra ensuite dans vos opérations et bilans.</p>
+              <div className="sens-cash" role="group" aria-label="Type d'opération">
+                <button type="button" className={`sens-depense ${cash.sens === "depense" ? "actif" : ""}`} aria-pressed={cash.sens === "depense"}
+                  onClick={() => setCash({ ...cash, sens: "depense" })}>
+                  <span className="sens-signe">−</span> Dépense <span className="sens-mot">(sortie)</span>
+                </button>
+                <button type="button" className={`sens-entree ${cash.sens === "entree" ? "actif" : ""}`} aria-pressed={cash.sens === "entree"}
+                  onClick={() => setCash({ ...cash, sens: "entree" })}>
+                  <span className="sens-signe">+</span> Entrée <span className="sens-mot">(reçu)</span>
+                </button>
+              </div>
               {cashMsg && <p className="positif">{cashMsg}</p>}
+              {raccourcis.length > 0 && (
+                <div className="raccourcis-cash">
+                  {raccourcis.map((r) => (
+                    <span key={r.id} className="raccourci-chip">
+                      <button type="button" className="chip-appliquer" onClick={() => appliquerRaccourci(r)}>
+                        {r.libelle}{r.montant !== null ? ` · ${formatMontant(r.montant)}` : ""}
+                      </button>
+                      <button type="button" className="chip-suppr" title="Supprimer ce raccourci" aria-label="Supprimer ce raccourci"
+                        onClick={() => retirerRaccourci(r.id)}>×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="saisie-cash">
                 <label>
                   Date
                   <ChampDate value={cash.date} onChange={(iso) => setCash({ ...cash, date: iso })} />
                 </label>
                 <label>
-                  Montant dépensé
-                  <input type="number" step="0.05" min="0" inputMode="decimal" value={cash.montant}
+                  {cash.sens === "entree" ? "Montant reçu" : "Montant dépensé"}
+                  <input type="number" step="0.05" min="0" inputMode="decimal" className={`montant-cash ${cash.sens}`} value={cash.montant}
                     onChange={(e) => setCash({ ...cash, montant: e.target.value })} />
                 </label>
                 <label className="champ-large">
@@ -310,9 +370,13 @@ export default function Import() {
                   </label>
                 )}
               </div>
-              <p>
+              <p className="actions-cash">
                 <button className="principal cash-go" disabled={cashEnvoi || !cashPret} onClick={enregistrerCash}>
                   {cashEnvoi ? "Enregistrement…" : "Enregistrer la dépense"}
+                </button>
+                <button type="button" className="lien petit" disabled={cash.libelle.trim() === "" || cash.poste_id === null}
+                  onClick={enregistrerRaccourci} title="Mémoriser ce libellé + poste (+ montant) comme raccourci">
+                  + Enregistrer comme raccourci
                 </button>
               </p>
             </div>
