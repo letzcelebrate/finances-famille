@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { supabase } from "../lib/supabase";
 import { formatDate, formatMontant } from "../lib/format";
 import { lireSaisie, usePostes } from "../components/Classement";
@@ -54,22 +54,15 @@ function CelluleEcart({ valeur, classe = "" }: { valeur: number; classe?: string
   );
 }
 
-/** Cellule d'un mois : le montant, et dessous (si demandé) le même mois l'année comparée + l'écart. */
-function CelluleMois({ valeur, cmp, classe = "" }: { valeur: number; cmp?: number; classe?: string }) {
+/** Cellule d'un mois ; cliquable (postes) pour ouvrir l'éditeur rapide de target. */
+function CelluleMois({ valeur, classe = "", onClick }: {
+  valeur: number; classe?: string; onClick?: (e: MouseEvent<HTMLTableCellElement>) => void;
+}) {
   const vide = valeur === 0;
   return (
-    <td className={`droite nowrap ${valeur < 0 ? "negatif" : ""} ${vide ? "vide" : ""} ${classe}`}>
+    <td className={`droite nowrap ${valeur < 0 ? "negatif" : ""} ${vide ? "vide" : ""} ${onClick ? "cliquable-mois" : ""} ${classe}`}
+      onClick={onClick}>
       {vide ? "–" : nombre.format(valeur)}
-      {cmp !== undefined && (
-        <span className="cmp-mois">
-          {cmp === 0 ? "–" : nombre.format(cmp)}{" "}
-          {(() => {
-            const e = arr(valeur - cmp);
-            if (e === 0) return <span className="delta">0</span>;
-            return <span className={`delta ${e > 0 ? "pos" : "neg"}`}>{e > 0 ? "+" : "−"}{nombre.format(Math.abs(e))}</span>;
-          })()}
-        </span>
-      )}
     </td>
   );
 }
@@ -99,6 +92,8 @@ export default function Previsionnel() {
   const [edition, setEdition] = useState<number | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [infoOuverte, setInfoOuverte] = useState(false);
+  const [vueMontant, setVueMontant] = useState<"mensuel" | "annuel">("mensuel");
+  const [cible, setCible] = useState<{ posteId: number; nom: string; moisLabel: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
     let annule = false;
@@ -288,9 +283,12 @@ export default function Previsionnel() {
   const enteteMois = (m: MoisAbs) => (vue === "glissant" ? `${MOIS_COURTS[m.mois - 1]} ${String(m.annee).slice(2)}` : MOIS_COURTS[m.mois - 1]);
   const libellePeriode = majuscule(plage(per[0], per[11]));
   const motTotal = vue === "civile" ? "année" : "12 mois";
+  const parMois = vueMontant === "mensuel";
+  // Synthèse de droite : moyenne mensuelle (total ÷ 12) ou total sur la période.
+  const val = (total: number) => (parMois ? moyenne(total) : total);
   const anneeComparee = (dec: number) => per[6].annee - dec; // année « principale » de la fenêtre comparée
   const fenetreAvant = (dec: number) => ilYaNAns(per, dec);
-  const NB_COLONNES = 17 + 2 * comparaisons.length; // poste + 12 mois + prévision, moy., objectif, écart + 2 par année comparée
+  const NB_COLONNES = 16 + 2 * comparaisons.length; // poste + 12 mois + prévision, objectif, écart + 2 par année comparée
 
   const toutes = [...prev.categories, ...(prev.neutres ? [prev.neutres] : [])].map((c) => c.nom);
   const toutOuvert = toutes.length > 0 && toutes.every((n) => ouvertes.has(n));
@@ -303,22 +301,27 @@ export default function Previsionnel() {
     });
   const nbARevoir = [...objectifs.values()].filter((o) => aRevoir(o, suggestions.get(o.poste_id) ?? null)).length;
 
-  const ligne = ({ nom, p, o, cmps, classe, avant: debut, apres }: {
-    nom: string; p: Montants; o: Montants; cmps: Montants[]; classe?: string; avant?: ReactNode; apres?: ReactNode;
+  const ouvrirCible = (posteId: number, nom: string, i: number, el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    setCible({ posteId, nom, moisLabel: majuscule(nomLong(per[i])), x: Math.min(r.left, window.innerWidth - 290), y: r.bottom + 4 });
+  };
+
+  const ligne = ({ nom, p, o, cmps, classe, avant: debut, apres, posteId }: {
+    nom: string; p: Montants; o: Montants; cmps: Montants[]; classe?: string; avant?: ReactNode; apres?: ReactNode; posteId?: number;
   }) => (
       <tr className={classe}>
         <th scope="row" className="col-poste">{debut}{nom}{apres}</th>
         {p.mois.map((v, i) => (
-          <CelluleMois key={i} valeur={v} classe={classeMois(i)} />
+          <CelluleMois key={i} valeur={v} classe={classeMois(i)}
+            onClick={posteId !== undefined ? (e) => ouvrirCible(posteId, nom, i, e.currentTarget) : undefined} />
         ))}
-        <Cellule valeur={p.total} classe="col-prev" />
-        <Cellule valeur={moyenne(p.total)} classe="col-moy" />
-        <Cellule valeur={o.total} />
-        <Cellule valeur={arr(p.total - o.total)} />
+        <Cellule valeur={val(p.total)} classe="col-resume col-prev bord" />
+        <Cellule valeur={val(o.total)} classe="col-resume" />
+        <Cellule valeur={arr(val(p.total) - val(o.total))} classe="col-resume" />
         {cmps.map((m, k) => (
           <Fragment key={k}>
-            <Cellule valeur={m.total} classe="col-cmp bord" />
-            <CelluleEcart valeur={arr(p.total - m.total)} classe="col-cmp" />
+            <Cellule valeur={val(m.total)} classe="col-resume col-cmp bord" />
+            <CelluleEcart valeur={arr(val(p.total) - val(m.total))} classe="col-resume col-cmp" />
           </Fragment>
         ))}
       </tr>
@@ -352,14 +355,19 @@ export default function Previsionnel() {
             return (
               <Fragment key={pp.nom}>
                 {ligne({ nom: pp.nom, p: pp.montants, o: bo.postes[i].montants, cmps: bcs.map((b) => b.postes[i].montants),
+                  posteId: id,
                   classe: `poste ${edition === id ? "ouverte" : ""}`,
                   apres: (
                     <>
                       {id !== undefined && !o && s && <span className="pastille neutre">sans objectif</span>}
                       {revoirPoste && <span className="pastille">à revoir</span>}
                       {id !== undefined && (
-                        <button type="button" className="lien petit modifier" onClick={() => setEdition(edition === id ? null : id)}>
-                          {edition === id ? "fermer" : "objectif"}
+                        <button type="button" className={`objectif-ico ${edition === id ? "actif" : ""}`}
+                          onClick={() => setEdition(edition === id ? null : id)}
+                          title={edition === id ? "Fermer l'objectif" : "Modifier l'objectif"} aria-label="Objectif">
+                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" />
+                          </svg>
                         </button>
                       )}
                     </>
@@ -396,6 +404,14 @@ export default function Previsionnel() {
           <input type="checkbox" checked={toutOuvert} onChange={(e) => setOuvertes(new Set(e.target.checked ? toutes : []))} />
           Afficher le détail des postes
         </label>
+        <span className="bascule" role="group" aria-label="Montants de la synthèse">
+          <button type="button" className={parMois ? "actif" : ""} aria-pressed={parMois} onClick={() => setVueMontant("mensuel")}>
+            Mensuel
+          </button>
+          <button type="button" className={!parMois ? "actif" : ""} aria-pressed={!parMois} onClick={() => setVueMontant("annuel")}>
+            Annuel
+          </button>
+        </span>
         <button type="button" className="info-bouton" aria-expanded={infoOuverte} aria-label="Informations sur le tableau"
           onClick={() => setInfoOuverte((v) => !v)}>i</button>
       </div>
@@ -440,9 +456,10 @@ export default function Previsionnel() {
           <thead>
             <tr className="bandeau">
               <th className="col-poste" />
-              <th colSpan={16} className="bandeau-periode">{libellePeriode}</th>
+              <th colSpan={12} className="bandeau-periode">{libellePeriode}</th>
+              <th colSpan={3} className="col-resume bord bandeau-cmp">{parMois ? "Moyenne par mois" : "Sur la période"}</th>
               {comparaisons.map((c) => (
-                <th key={c.decalage} colSpan={2} className="col-cmp bord bandeau-cmp">
+                <th key={c.decalage} colSpan={2} className="col-resume col-cmp bord bandeau-cmp">
                   Comparé à {anneeComparee(c.decalage)}<br />
                   <span className="sous-titre">{plage(fenetreAvant(c.decalage)[0], fenetreAvant(c.decalage)[11])}</span>
                 </th>
@@ -451,14 +468,13 @@ export default function Previsionnel() {
             <tr>
               <th className="col-poste">Poste</th>
               {per.map((m, i) => <th key={i} className={`droite ${classeMois(i)}`}>{enteteMois(m)}</th>)}
-              <th className="droite col-prev">Prévision {motTotal}</th>
-              <th className="droite">Moy.</th>
-              <th className="droite">Objectif {motTotal}</th>
-              <th className="droite">Écart</th>
+              <th className="droite col-resume col-prev bord">Prévision {parMois ? "mensuelle" : motTotal}</th>
+              <th className="droite col-resume">Objectif {parMois ? "mensuel" : motTotal}</th>
+              <th className="droite col-resume">Écart</th>
               {comparaisons.map((c) => (
                 <Fragment key={c.decalage}>
-                  <th className="droite col-cmp bord">Réel {anneeComparee(c.decalage)}</th>
-                  <th className="droite col-cmp">Écart</th>
+                  <th className="droite col-resume col-cmp bord">Réel {anneeComparee(c.decalage)}{parMois ? " /mois" : ""}</th>
+                  <th className="droite col-resume col-cmp">Écart</th>
                 </Fragment>
               ))}
             </tr>
@@ -480,7 +496,62 @@ export default function Previsionnel() {
           )}
         </table>
       </div>
+
+      {cible && (
+        <div className="popover-fond" onClick={() => setCible(null)}>
+          <EditeurTarget posteId={cible.posteId} nom={cible.nom} moisLabel={cible.moisLabel} x={cible.x} y={cible.y}
+            objectif={objectifs.get(cible.posteId) ?? null} suggestion={suggestions.get(cible.posteId) ?? null} envoi={envoi}
+            onEnregistrer={(o) => { setCible(null); enregistrer(o); }} onFermer={() => setCible(null)} />
+        </div>
+      )}
     </section>
+  );
+}
+
+function EditeurTarget({ posteId, nom, moisLabel, x, y, objectif, suggestion, envoi, onEnregistrer, onFermer }: {
+  posteId: number; nom: string; moisLabel: string; x: number; y: number;
+  objectif: Objectif | null; suggestion: Objectif | null; envoi: boolean;
+  onEnregistrer: (o: Objectif) => void; onFermer: () => void;
+}) {
+  const base = objectif ?? suggestion;
+  const signe = base && base.montant > 0 ? 1 : -1;
+  const [montant, setMontant] = useState(objectif ? Math.abs(objectif.montant).toFixed(2).replace(".", ",") : "");
+  const valeur = lireSaisie(montant);
+  const valide = valeur !== null && valeur >= 0;
+
+  const appliquer = () => {
+    if (!valide) return;
+    onEnregistrer({
+      poste_id: posteId,
+      mode: base?.mode ?? "variable",
+      montant: signe * Math.abs(valeur ?? 0),
+      nb_operations: base?.mode === "regulier" ? base?.nb_operations ?? 1 : 1,
+      mois: base?.mois ? [...base.mois] : [...TOUS_LES_MOIS],
+    });
+  };
+
+  return (
+    <div className="popover-target" style={{ top: y, left: x }} onClick={(e) => e.stopPropagation()}>
+      <strong>{nom}</strong>
+      <div className="sous">{moisLabel} · objectif mensuel {signe < 0 ? "(dépense)" : "(entrée)"}</div>
+      <div className="popover-ligne">
+        <input autoFocus inputMode="decimal" className="montant" value={montant} placeholder="Nouvelle target"
+          onChange={(e) => setMontant(e.target.value)} />
+        <span>€/mois</span>
+        {suggestion && (
+          <button type="button" className="calc-ico" title="Calculer depuis l'historique des 12 derniers mois"
+            onClick={() => setMontant(Math.abs(suggestion.montant).toFixed(2).replace(".", ","))}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="4" y="2" width="16" height="20" rx="2" /><line x1="8" y1="6" x2="16" y2="6" /><line x1="8" y1="10" x2="8" y2="10" /><line x1="12" y1="10" x2="12" y2="10" /><line x1="16" y1="10" x2="16" y2="10" /><line x1="8" y1="14" x2="8" y2="14" /><line x1="12" y1="14" x2="12" y2="14" /><line x1="8" y1="18" x2="16" y2="18" />
+            </svg>
+          </button>
+        )}
+      </div>
+      <div className="popover-actions">
+        <button type="button" className="principal" disabled={envoi || !valide} onClick={appliquer}>Appliquer à tous les mois</button>
+        <button type="button" className="lien" onClick={onFermer}>Fermer</button>
+      </div>
+    </div>
   );
 }
 

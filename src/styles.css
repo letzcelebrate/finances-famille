@@ -367,3 +367,30 @@ table.table-synthese td:nth-child(3) { white-space: nowrap; }
 .info-panneau { padding: 14px 16px; }
 .info-panneau p { margin: 0 0 8px; }
 .info-panneau p:last-child { margin-bottom: 0; }
+
+/* Prév & Targets : bloc synthèse de droite sur fond gris foncé, texte clair */
+.tableau-prev .col-resume { background: #505d6c !important; color: #f3f6fa; }
+.tableau-prev thead th.col-resume { color: #eef2f7; }
+.tableau-prev .col-resume.bord { border-left: 2px solid #11161d; }
+.tableau-prev td.col-resume.negatif { color: #ff9e8f; }
+.tableau-prev td.col-resume.vide { color: #94a0ae; opacity: 1; }
+.tableau-prev .col-resume .delta.pos { color: #86dca6; }
+.tableau-prev .col-resume .delta.neg { color: #ff9e8f; }
+
+/* Prév & Targets : noms de poste/catégorie sur une seule ligne + « objectif » en icône */
+.tableau-prev th.col-poste { white-space: nowrap; }
+.objectif-ico { border: 0; background: none; padding: 0 0 0 6px; cursor: pointer; color: var(--discret); vertical-align: middle; line-height: 0; }
+.objectif-ico:hover, .objectif-ico.actif { color: var(--accent); }
+
+/* Prév & Targets : édition rapide de target au clic sur une case de mois */
+.tableau-prev td.cliquable-mois { cursor: pointer; }
+.tableau-prev td.cliquable-mois:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.popover-fond { position: fixed; inset: 0; z-index: 100; }
+.popover-target { position: fixed; z-index: 101; width: 268px; background: var(--carte); border: 1px solid var(--bord);
+  border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); padding: 12px 14px; display: grid; gap: 8px; }
+.popover-target strong { font-size: 0.95rem; }
+.popover-ligne { display: flex; align-items: center; gap: 8px; }
+.popover-ligne input.montant { flex: 1 1 auto; width: auto; min-width: 0; }
+.calc-ico { border: 1px solid var(--bord); background: var(--carte); border-radius: 8px; padding: 6px; cursor: pointer; color: var(--accent); line-height: 0; }
+.calc-ico:hover { background: color-mix(in srgb, var(--accent) 10%, var(--carte)); }
+.popover-actions { display: flex; gap: 10px; align-items: center; margin-top: 2px; }
