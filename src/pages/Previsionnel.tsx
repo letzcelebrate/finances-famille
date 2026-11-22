@@ -504,7 +504,7 @@ function EditeurObjectif({ posteId, nom, objectif, suggestion, envoi, onEnregist
   const [mois, setMois] = useState<Set<number>>(new Set(depart?.mois ?? TOUS_LES_MOIS));
 
   const valeur = lireSaisie(montant);
-  const valide = valeur !== null && valeur > 0 && mois.size > 0 && nb >= 1 && nb <= 31;
+  const valide = valeur !== null && valeur >= 0 && mois.size > 0 && nb >= 1 && nb <= 31;
   const objetSaisi = (): Objectif => ({
     poste_id: posteId, mode, montant: (sens === "depense" ? -1 : 1) * Math.abs(valeur ?? 0),
     nb_operations: mode === "regulier" ? nb : 1, mois: [...mois].sort((a, b) => a - b),
