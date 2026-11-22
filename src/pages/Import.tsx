@@ -56,6 +56,15 @@ export default function Import() {
   const [memoriser, setMemoriser] = useState(true);
   const [resultat, setResultat] = useState<string | null>(null);
   const [regleEnCours, setRegleEnCours] = useState<{ motif: string; poste_id: number | null; a_confirmer: boolean } | null>(null);
+  const aujourdhui = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
+  const [cash, setCash] = useState<{ date: string; libelle: string; montant: string; poste_id: number | null; compte_id: number | "" }>(
+    { date: aujourdhui, libelle: "", montant: "", poste_id: null, compte_id: "" },
+  );
+  const [cashEnvoi, setCashEnvoi] = useState(false);
+  const [cashMsg, setCashMsg] = useState<string | null>(null);
 
   useEffect(() => {
     chargerComptes().then(setComptes).catch((e) => setErreur(e.message));
@@ -192,6 +201,37 @@ export default function Import() {
     }
   }
 
+  async function enregistrerCash() {
+    const cashOuverts = comptes.filter((c) => c.ouvert && c.type_compte === "Cash");
+    const compteId = cash.compte_id !== "" ? cash.compte_id : (cashOuverts.length === 1 ? cashOuverts[0].id : null);
+    const compte = comptes.find((c) => c.id === compteId);
+    const montant = -(Math.round(Number((cash.montant || "").replace(",", ".")) * 100) / 100);
+    const libelle = cash.libelle.trim();
+    if (!compte || !(montant < 0) || libelle === "" || cash.poste_id === null || !cash.date) return;
+    setCashEnvoi(true);
+    setErreur(null);
+    setCashMsg(null);
+    try {
+      await importer(compte.id, "Saisie cash", 1, [{
+        date_operation: cash.date,
+        libelle,
+        montant,
+        devise: compte.devise,
+        titulaire: compte.titulaire,
+        poste_id: cash.poste_id,
+        note: "",
+        ventilations: [],
+        empreinte: empreinte(cash.date, libelle, montant),
+      }]);
+      setCashMsg(`Dépense enregistrée : ${formatMontant(montant, compte.devise)} — ${libelle}.`);
+      setCash({ date: aujourdhui, libelle: "", montant: "", poste_id: null, compte_id: cash.compte_id });
+    } catch (e) {
+      setErreur(`L'enregistrement de la dépense en espèces a échoué. (${(e as Error).message})`);
+    } finally {
+      setCashEnvoi(false);
+    }
+  }
+
   function recommencer() {
     setAnalyse(null);
     setLignes([]);
@@ -200,6 +240,14 @@ export default function Import() {
     setCompteChoisi("");
     setEtat("choix");
   }
+
+  const cashComptes = comptes.filter((c) => c.ouvert && c.type_compte === "Cash");
+  const cashPret =
+    (cash.compte_id !== "" || cashComptes.length === 1) &&
+    cash.libelle.trim() !== "" &&
+    Number((cash.montant || "").replace(",", ".")) > 0 &&
+    cash.poste_id !== null &&
+    !!cash.date;
 
   const incluses = lignes.filter((l) => l.inclure);
   const total = incluses.reduce((s, l) => s + l.montant, 0);
@@ -214,11 +262,56 @@ export default function Import() {
       {erreur && <p className="carte alerte">{erreur}</p>}
 
       {etat === "choix" && (
-        <div className="carte">
-          <h2>Importer un relevé</h2>
-          <p className="sous">Fichier CSV téléchargé depuis Raiffeisen (compte courant ou relevé de carte Visa), sans l'ouvrir dans Excel.</p>
-          <input type="file" accept=".csv,text/csv" onChange={(e) => e.target.files?.[0] && analyser(e.target.files[0])} />
-        </div>
+        <>
+          <div className="carte">
+            <h2>Importer un relevé</h2>
+            <p className="sous">Fichier CSV téléchargé depuis Raiffeisen (compte courant ou relevé de carte Visa), sans l'ouvrir dans Excel.</p>
+            <input type="file" accept=".csv,text/csv" onChange={(e) => e.target.files?.[0] && analyser(e.target.files[0])} />
+          </div>
+
+          {cashComptes.length > 0 && (
+            <div className="carte">
+              <h2>Saisir une dépense en espèces</h2>
+              <p className="sous">Enregistrée sur le compte Cash ; elle apparaîtra ensuite dans vos opérations et bilans.</p>
+              {cashMsg && <p className="positif">{cashMsg}</p>}
+              <div className="saisie-cash">
+                <label>
+                  Date
+                  <input type="date" value={cash.date} onChange={(e) => setCash({ ...cash, date: e.target.value })} />
+                </label>
+                <label>
+                  Montant dépensé
+                  <input type="number" step="0.05" min="0" inputMode="decimal" value={cash.montant}
+                    onChange={(e) => setCash({ ...cash, montant: e.target.value })} />
+                </label>
+                <label className="champ-large">
+                  Libellé
+                  <input value={cash.libelle} placeholder="ex. Marché légumes du dimanche, cadeau anniversaire…"
+                    onChange={(e) => setCash({ ...cash, libelle: e.target.value })} />
+                </label>
+                <label className="champ-large">
+                  Poste
+                  <SelectPoste valeur={cash.poste_id} groupes={groupes} manquant={cash.poste_id === null && cash.libelle.trim() !== ""}
+                    onChange={(id) => setCash({ ...cash, poste_id: id })} />
+                </label>
+                {cashComptes.length > 1 && (
+                  <label className="champ-large">
+                    Compte
+                    <select value={cash.compte_id} onChange={(e) => setCash({ ...cash, compte_id: e.target.value === "" ? "" : Number(e.target.value) })}>
+                      <option value="">— choisir —</option>
+                      {cashComptes.map((c) => <option key={c.id} value={c.id}>{c.banque} — {c.nom}</option>)}
+                    </select>
+                  </label>
+                )}
+              </div>
+              <p>
+                <button className="principal" disabled={cashEnvoi || !cashPret} onClick={enregistrerCash}>
+                  {cashEnvoi ? "Enregistrement…" : "Enregistrer la dépense"}
+                </button>
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       {etat === "analyse" && <p>Analyse du fichier…</p>}

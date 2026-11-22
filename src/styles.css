@@ -108,6 +108,11 @@ button.principal:disabled { opacity: 0.6; }
 
 .filtres { display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 12px; }
 .resume { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 4px 10px; color: var(--discret); }
+/* Saisie cash : libellé/poste en pleine largeur, empilé sur téléphone. */
+.saisie-cash { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 760px; }
+.saisie-cash .champ-large { grid-column: 1 / -1; }
+.saisie-cash input, .saisie-cash select { padding: 11px 12px; }
+@media (max-width: 640px) { .saisie-cash { grid-template-columns: 1fr; } }
 
 .pagination { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 12px; }
 .pagination button { font: inherit; padding: 6px 12px; border: 1px solid var(--bord); border-radius: 8px; background: var(--carte); color: var(--texte); cursor: pointer; }
