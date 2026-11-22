@@ -46,17 +46,17 @@ export default function App() {
           <button className={onglet === "synthese" ? "actif" : ""} onClick={() => setOnglet("synthese")}>
             Synthèse
           </button>
-          <button className={onglet === "operations" ? "actif" : ""} onClick={() => setOnglet("operations")}>
-            Opérations
-          </button>
-          <button className={onglet === "bilan-mois" ? "actif" : ""} onClick={() => setOnglet("bilan-mois")}>
-            Bilan par mois
-          </button>
           <button className={onglet === "previsionnel" ? "actif" : ""} onClick={() => setOnglet("previsionnel")}>
             Prév &amp; Targets
           </button>
           <button className={onglet === "soldes" ? "actif" : ""} onClick={() => setOnglet("soldes")}>
             Soldes annuels
+          </button>
+          <button className={onglet === "bilan-mois" ? "actif" : ""} onClick={() => setOnglet("bilan-mois")}>
+            Bilan par mois
+          </button>
+          <button className={onglet === "operations" ? "actif" : ""} onClick={() => setOnglet("operations")}>
+            Opérations
           </button>
           <button className={onglet === "import" ? "actif" : ""} onClick={() => setOnglet("import")}>
             Importer
