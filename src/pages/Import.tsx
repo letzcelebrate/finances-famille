@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { formatDate, formatMontant } from "../lib/format";
-import { lireCsvRaiffeisen, ErreurImport, type FichierImport } from "../lib/import/raiffeisen";
+import { ErreurImport, type FichierImport } from "../lib/import/raiffeisen";
+import { lireCsv } from "../lib/import/lecture";
 import { empreinte, separerNouvelles } from "../lib/import/empreinte";
 import { preparerClassement, type Proposition } from "../lib/import/classement";
 import { attribuerCartes } from "../lib/import/decomptes";
@@ -83,7 +84,7 @@ export default function Import() {
     setEtat("analyse");
     try {
       const texte = await fichierChoisi.text();
-      const fichier = lireCsvRaiffeisen(texte);
+      const fichier = lireCsv(texte);
       const compte = comptes.find((c) => c.identifiant_import === fichier.identifiant) ?? null;
       setAnalyse({ nomFichier: fichierChoisi.name, fichier, compte, dejaPresentes: 0, solde: null });
       if (compte) await preparer(fichierChoisi.name, fichier, compte);
@@ -268,7 +269,7 @@ export default function Import() {
           {!estMobile && (
             <div className="carte">
               <h2>Importer un relevé</h2>
-              <p className="sous">Fichier CSV téléchargé depuis Raiffeisen (compte courant ou relevé de carte Visa), sans l'ouvrir dans Excel.</p>
+              <p className="sous">Fichier CSV Raiffeisen (compte courant ou relevé de carte Visa) ou Boursorama, sans l'ouvrir dans Excel.</p>
               <input type="file" accept=".csv,text/csv" onChange={(e) => e.target.files?.[0] && analyser(e.target.files[0])} />
             </div>
           )}

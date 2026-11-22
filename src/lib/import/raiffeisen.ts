@@ -24,7 +24,7 @@ export type LigneImport = {
 };
 
 export type FichierImport = {
-  format: "raiffeisen_compte" | "raiffeisen_carte";
+  format: "raiffeisen_compte" | "raiffeisen_carte" | "boursorama";
   identifiant: string; // IBAN ou numéro de carte masqué
   solde_banque: number | null; // compte courant : solde indiqué par la banque
   periode: { debut: string; fin: string; prelevement: string; total: number } | null; // carte : relevé
@@ -33,7 +33,7 @@ export type FichierImport = {
 
 export class ErreurImport extends Error {}
 
-function decouperLigne(ligne: string): string[] {
+export function decouperLigne(ligne: string): string[] {
   // Point-virgule comme séparateur, guillemets possibles autour d'un champ
   const champs: string[] = [];
   let courant = "";
@@ -58,7 +58,7 @@ function decouperLigne(ligne: string): string[] {
   return champs.map((c) => c.trim());
 }
 
-function lireMontant(texte: string): number {
+export function lireMontant(texte: string): number {
   const propre = texte.replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
   const n = Number(propre);
   if (!Number.isFinite(n) || propre === "") throw new ErreurImport(`Montant illisible : « ${texte} »`);
