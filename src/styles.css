@@ -416,3 +416,9 @@ table.table-synthese td:nth-child(3) { white-space: nowrap; }
 .sens-cash .sens-entree.actif .sens-mot { color: var(--positif); }
 .montant-cash.depense { border-color: color-mix(in srgb, var(--negatif) 45%, var(--bord)); }
 .montant-cash.entree { border-color: color-mix(in srgb, var(--positif) 45%, var(--bord)); }
+
+/* Opérations : en-têtes figés (sticky) + couleur distincte + filtres rapides par colonne */
+.tableau-operations thead th { background: color-mix(in srgb, var(--accent) 14%, var(--carte)); }
+.tableau-operations thead tr:first-child th { position: sticky; top: 0; z-index: 3; }
+.tableau-operations thead tr.filtre-rapide th { position: sticky; top: 38px; z-index: 2; padding: 3px 8px 9px; font-weight: 400; vertical-align: top; }
+.tableau-operations tr.filtre-rapide input[type="search"], .tableau-operations tr.filtre-rapide select { width: 100%; padding: 6px 8px; font-size: 0.85rem; }

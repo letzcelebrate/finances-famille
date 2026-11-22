@@ -107,7 +107,6 @@ function ListeCases({ groupes, coches, onCoches, extra }: {
     <>
       <input type="search" placeholder="Rechercher…" value={cherche} onChange={(e) => setCherche(e.target.value)} />
       <div className="tout-cocher">
-        <button type="button" className="lien petit" onClick={() => onCoches(new Set([...coches, ...tous]))}>Tout cocher</button>
         <button type="button" className="lien petit" onClick={() => onCoches(new Set([...coches].filter((id) => !tous.includes(id))))}>Tout décocher</button>
       </div>
       <div className="liste-cases">
@@ -132,7 +131,7 @@ export function FiltreComptes({ filtres, onChange, fermer, comptes }: Props & {
   comptes: { id: number; banque: string; nom: string; ouvert: boolean }[];
 }) {
   const tous = comptes.map((c) => c.id);
-  const [coches, setCoches] = useState(new Set(filtres.comptes ?? tous));
+  const [coches, setCoches] = useState(new Set(filtres.comptes ?? []));
   const el = (c: (typeof comptes)[number]) => ({ id: c.id, nom: `${c.banque} — ${c.nom}` });
   const groupes: [string, Element[]][] = [
     ["Comptes ouverts", comptes.filter((c) => c.ouvert).map(el)],
@@ -152,8 +151,8 @@ export function FiltreComptes({ filtres, onChange, fermer, comptes }: Props & {
 
 export function FiltrePostes({ filtres, onChange, fermer, groupes }: Props & { groupes: GroupesPostes }) {
   const tous = groupes.flatMap(([, ps]) => ps.map((p) => p.id));
-  const [coches, setCoches] = useState(new Set(filtres.postes ?? tous));
-  const [aClasser, setAClasser] = useState(filtres.postes === null ? true : filtres.aClasser);
+  const [coches, setCoches] = useState(new Set(filtres.postes ?? []));
+  const [aClasser, setAClasser] = useState(filtres.postes === null ? false : filtres.aClasser);
   const ok = () => {
     const toutCoche = coches.size === tous.length && aClasser;
     onChange(toutCoche ? { postes: null, aClasser: true } : { postes: [...coches], aClasser });

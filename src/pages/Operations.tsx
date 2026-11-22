@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import { formatDate, formatMontant } from "../lib/format";
 import { diviserOperation, modifierOperation, operationsDuTiers, reclasser } from "../lib/import/donnees";
 import { EditeurDivision, partsInitiales, partsValides, SelectPoste, usePostes, type GroupesPostes, type Part } from "../components/Classement";
-import { appliquerFiltres, colonnesActives, FILTRES_VIDES, type Filtres } from "../lib/filtresOperations";
+import { appliquerFiltres, colonnesActives, FILTRES_VIDES, raccourcisDates, type Filtres, type Sens } from "../lib/filtresOperations";
 import { EnTeteFiltre, FiltreComptes, FiltreDate, FiltreMontant, FiltrePostes, FiltreTexte } from "../components/FiltresColonnes";
 import { useEstMobile } from "../lib/mobile";
 
@@ -45,6 +45,8 @@ export default function Operations({ compteInitial }: { compteInitial: number | 
   const [ouverte, setOuverte] = useState<number | null>(null);
   const [version, setVersion] = useState(0);
   const estMobile = useEstMobile();
+  const [recherche, setRecherche] = useState(filtres.texte);
+  const [exportEnCours, setExportEnCours] = useState(false);
 
   useEffect(() => {
     supabase
@@ -110,7 +112,68 @@ export default function Operations({ compteInitial }: { compteInitial: number | 
     };
   }, [filtres, page, version]);
 
+  // Recherche rapide (sous les en-têtes) : synchronisée avec le filtre texte, avec un léger délai.
+  useEffect(() => setRecherche(filtres.texte), [filtres.texte]);
+  useEffect(() => {
+    if (recherche === filtres.texte) return;
+    const t = setTimeout(() => changerFiltres({ texte: recherche }), 300);
+    return () => clearTimeout(t);
+  }, [recherche]);
+
+  async function exporter() {
+    setExportEnCours(true);
+    setErreur(null);
+    try {
+      let divisees: number[] = [];
+      if (filtres.postes !== null && filtres.postes.length > 0) {
+        const { data, error } = await supabase.from("ventilations").select("operation_id").in("poste_id", filtres.postes);
+        if (error) throw new Error(error.message);
+        divisees = [...new Set((data ?? []).map((v: any) => Number(v.operation_id)))];
+      }
+      const filtrer = <T,>(q: T): T => appliquerFiltres(q as any, filtres, divisees) as T;
+      const lignes: any[] = [];
+      for (let debut = 0; ; debut += 1000) {
+        const { data, error } = await filtrer(
+          supabase.from("v_operations").select("date_operation, libelle, note, banque, compte_nom, poste_nom, categorie_nom, montant, devise"),
+        ).order("date_operation", { ascending: false }).order("id", { ascending: false }).range(debut, debut + 999);
+        if (error) throw new Error(error.message);
+        lignes.push(...(data ?? []));
+        if (!data || data.length < 1000) break;
+      }
+      const esc = (v: unknown) => {
+        const s = String(v ?? "");
+        return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const entete = ["Date", "Libellé", "Note", "Compte", "Poste", "Catégorie", "Montant", "Devise"];
+      const corps = lignes.map((o) => [
+        o.date_operation, o.libelle, o.note ?? "", `${o.banque} — ${o.compte_nom}`, o.poste_nom ?? "", o.categorie_nom ?? "",
+        Number(o.montant).toFixed(2).replace(".", ","), o.devise,
+      ].map(esc).join(";"));
+      const csv = "﻿" + [entete.join(";"), ...corps].join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `operations-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setErreur(`L'export a échoué. (${(e as Error).message})`);
+    } finally {
+      setExportEnCours(false);
+    }
+  }
+
   const pages = Math.max(1, Math.ceil(nombre / PAR_PAGE));
+
+  // Filtres rapides sous les en-têtes : valeur courante reflétée dans chaque contrôle.
+  const compteRapide = filtres.comptes === null ? "" : filtres.comptes.length === 1 ? String(filtres.comptes[0]) : "multi";
+  const posteRapide = filtres.postes === null ? "" : filtres.postes.length === 1 ? String(filtres.postes[0]) : "multi";
+  const dateRapide = (raccourcisDates().find(([, d, a]) => d === filtres.du && a === filtres.au) ?? [""])[0];
+  const appliquerDateRapide = (nom: string) => {
+    const r = raccourcisDates().find(([n]) => n === nom);
+    changerFiltres(r ? { du: r[1], au: r[2] } : { du: "", au: "" });
+  };
 
   // Version app (téléphone) : recherche seule, résultats en liste de cartes.
   if (estMobile) {
@@ -169,7 +232,10 @@ export default function Operations({ compteInitial }: { compteInitial: number | 
               {" "}· <button className="lien petit" onClick={() => setFiltres(FILTRES_VIDES)}>Effacer tous les filtres</button>
             </>
           )}{" "}
-          · <span className="sous">clique sur une opération pour la modifier · filtre avec les ▾ des titres</span>
+          {" "}· <button className="lien petit" onClick={exporter} disabled={exportEnCours || nombre === 0}>
+            {exportEnCours ? "Export…" : "⤓ Exporter (CSV)"}
+          </button>
+          · <span className="sous">clique sur une opération pour la modifier</span>
         </span>
         {totalPeriode !== null && (
           <strong className={totalPeriode < 0 ? "negatif" : ""}>Total : {formatMontant(totalPeriode)}</strong>
@@ -201,6 +267,44 @@ export default function Operations({ compteInitial }: { compteInitial: number | 
                 <EnTeteFiltre titre="Montant" actif={actives.has("montant")} className="droite" aDroite>
                   {(fermer) => <FiltreMontant filtres={filtres} onChange={changerFiltres} fermer={fermer} />}
                 </EnTeteFiltre>
+              </tr>
+              <tr className="filtre-rapide">
+                <th>
+                  <select value={dateRapide} aria-label="Filtre date rapide" onChange={(e) => appliquerDateRapide(e.target.value)}>
+                    <option value="">Toutes dates</option>
+                    {raccourcisDates().map(([nom]) => <option key={nom} value={nom}>{nom}</option>)}
+                  </select>
+                </th>
+                <th>
+                  <input type="search" value={recherche} placeholder="Rechercher…" onChange={(e) => setRecherche(e.target.value)} />
+                </th>
+                <th className="masquer-mobile">
+                  <select value={compteRapide} aria-label="Filtre compte rapide"
+                    onChange={(e) => changerFiltres({ comptes: e.target.value === "" ? null : [Number(e.target.value)] })}>
+                    <option value="">Tous comptes</option>
+                    {filtres.comptes && filtres.comptes.length > 1 && <option value="multi" disabled>(plusieurs)</option>}
+                    {comptes.filter((c) => c.ouvert).map((c) => <option key={c.id} value={c.id}>{c.banque} — {c.nom}</option>)}
+                  </select>
+                </th>
+                <th>
+                  <select value={posteRapide} aria-label="Filtre poste rapide"
+                    onChange={(e) => changerFiltres(e.target.value === "" ? { postes: null, aClasser: true } : { postes: [Number(e.target.value)], aClasser: false })}>
+                    <option value="">Tous postes</option>
+                    {filtres.postes && filtres.postes.length > 1 && <option value="multi" disabled>(plusieurs)</option>}
+                    {groupes.map(([cat, ps]) => (
+                      <optgroup key={cat} label={cat}>
+                        {ps.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                </th>
+                <th className="droite">
+                  <select value={filtres.sens} aria-label="Filtre montant rapide" onChange={(e) => changerFiltres({ sens: e.target.value as Sens })}>
+                    <option value="tous">Tout</option>
+                    <option value="depenses">Dépenses</option>
+                    <option value="entrees">Entrées</option>
+                  </select>
+                </th>
               </tr>
             </thead>
             <tbody>
