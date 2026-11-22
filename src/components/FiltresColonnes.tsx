@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { raccourcisDates, type Filtres, type Sens } from "../lib/filtresOperations";
 import type { GroupesPostes } from "./Classement";
+import { ChampDate } from "./ChampDate";
 
 /** Titre de colonne avec une petite flèche qui ouvre un menu de filtre (comme Excel). */
 export function EnTeteFiltre({ titre, actif, className = "", aDroite = false, children }: {
@@ -59,8 +60,8 @@ export function FiltreDate({ filtres, onChange, fermer }: Props) {
           <button type="button" key={nom} onClick={() => { onChange({ du: d, au: a }); fermer(); }}>{nom}</button>
         ))}
       </div>
-      <label>Du<input type="date" value={du} onChange={(e) => setDu(e.target.value)} /></label>
-      <label>Au<input type="date" value={au} onChange={(e) => setAu(e.target.value)} /></label>
+      <label>Du<ChampDate value={du} onChange={setDu} /></label>
+      <label>Au<ChampDate value={au} onChange={setAu} /></label>
       <Boutons onOk={() => { onChange({ du, au }); fermer(); }} onEffacer={() => { onChange({ du: "", au: "" }); fermer(); }} />
     </div>
   );

@@ -19,6 +19,7 @@ import {
 } from "../lib/import/donnees";
 import { EditeurDivision, partsInitiales, partsValides, SelectPoste, usePostes, type Part } from "../components/Classement";
 import { useEstMobile } from "../lib/mobile";
+import { ChampDate } from "../components/ChampDate";
 
 type Ligne = {
   cle: number;
@@ -282,7 +283,7 @@ export default function Import() {
               <div className="saisie-cash">
                 <label>
                   Date
-                  <input type="date" value={cash.date} onChange={(e) => setCash({ ...cash, date: e.target.value })} />
+                  <ChampDate value={cash.date} onChange={(iso) => setCash({ ...cash, date: iso })} />
                 </label>
                 <label>
                   Montant dépensé
