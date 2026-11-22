@@ -422,3 +422,10 @@ table.table-synthese td:nth-child(3) { white-space: nowrap; }
 .tableau-operations thead tr:first-child th { position: sticky; top: 0; z-index: 3; }
 .tableau-operations thead tr.filtre-rapide th { position: sticky; top: 38px; z-index: 2; padding: 3px 8px 9px; font-weight: 400; vertical-align: top; }
 .tableau-operations tr.filtre-rapide input[type="search"], .tableau-operations tr.filtre-rapide select { width: 100%; padding: 6px 8px; font-size: 0.85rem; }
+
+/* Alerte Neutres (virements internes) sur la Synthèse */
+.bandeau-neutres { padding: 11px 15px; font-size: 0.9rem; }
+.bandeau-neutres.ok { color: var(--positif); background: color-mix(in srgb, var(--positif) 8%, var(--carte)); }
+.bandeau-neutres.alerte { color: var(--negatif); background: color-mix(in srgb, var(--negatif) 10%, var(--carte));
+  border: 1px solid color-mix(in srgb, var(--negatif) 40%, var(--carte)); }
+.bandeau-neutres strong { font-weight: 700; }

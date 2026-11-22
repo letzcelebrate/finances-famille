@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { formatDate, formatMontant } from "../lib/format";
 import { construireSynthese, type Solde } from "../lib/synthese";
+import { etatNeutresRecent, type EtatNeutres } from "../lib/neutres";
 
 export default function Synthese({ onChoisirCompte }: { onChoisirCompte: (id: number) => void }) {
   const [soldes, setSoldes] = useState<Solde[] | null>(null);
+  const [neutres, setNeutres] = useState<EtatNeutres | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,6 +20,7 @@ export default function Synthese({ onChoisirCompte }: { onChoisirCompte: (id: nu
         if (error) setErreur(error.message);
         else setSoldes((data ?? []).map((s) => ({ ...s, solde: Number(s.solde) })));
       });
+    etatNeutresRecent(12).then(setNeutres).catch(() => setNeutres(null));
   }, []);
 
   if (erreur) return <p className="alerte">Erreur : {erreur}</p>;
@@ -27,6 +30,15 @@ export default function Synthese({ onChoisirCompte }: { onChoisirCompte: (id: nu
 
   return (
     <section>
+      {neutres && (
+        <div className={`carte bandeau-neutres ${neutres.ok ? "ok" : "alerte"}`}>
+          {neutres.ok ? "✓ " : "⚠ "}
+          Virements internes (Neutres) sur 12 mois : <strong>{formatMontant(neutres.total)}</strong>
+          {neutres.ok
+            ? " — équilibrés."
+            : " — devrait être proche de 0 : un virement a peut-être un seul côté enregistré (relevé oublié). À vérifier dans Opérations (Poste = Neutres)."}
+        </div>
+      )}
       <div className="carte total">
         <span>Patrimoine total (comptes ouverts)</span>
         <strong>{formatMontant(total)}</strong>
