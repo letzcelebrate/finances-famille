@@ -98,6 +98,7 @@ export default function Previsionnel() {
   const [ouvertes, setOuvertes] = useState<Set<string>>(new Set());
   const [edition, setEdition] = useState<number | null>(null);
   const [envoi, setEnvoi] = useState(false);
+  const [infoOuverte, setInfoOuverte] = useState(false);
 
   useEffect(() => {
     let annule = false;
@@ -395,17 +396,35 @@ export default function Previsionnel() {
           <input type="checkbox" checked={toutOuvert} onChange={(e) => setOuvertes(new Set(e.target.checked ? toutes : []))} />
           Afficher le détail des postes
         </label>
-        <span className="sous">
-          <strong>{libellePeriode}</strong>
-          {passes.length > 0 && <> · {plage(passes[0], passes[passes.length - 1])} : réel</>}
-          {enCours && (
-            <> · <span className="legende-en-cours">{nomLong(enCours)} : prévision</span> (données jusqu'au {formatDate(donnees.derniere)})</>
-          )}
-          {aVenir.length > 0 && <> · <span className="legende-a-venir">{plage(aVenir[0], aVenir[aVenir.length - 1])} : objectifs</span></>}
-          {!enCours && aVenir.length === 0 && " · tout est réel"}
-          {comparaisons.length > 0 && <> · comparé au réel de {comparaisons.map((c) => anneeComparee(c.decalage)).join(", ")}</>}
-        </span>
+        <button type="button" className="info-bouton" aria-expanded={infoOuverte} aria-label="Informations sur le tableau"
+          onClick={() => setInfoOuverte((v) => !v)}>i</button>
       </div>
+
+      {infoOuverte && (
+        <div className="carte info-panneau">
+          <p className="sous">
+            <strong>{libellePeriode}</strong>
+            {passes.length > 0 && <> · {plage(passes[0], passes[passes.length - 1])} : réel</>}
+            {enCours && (
+              <> · <span className="legende-en-cours">{nomLong(enCours)} : prévision</span> (données jusqu'au {formatDate(donnees.derniere)})</>
+            )}
+            {aVenir.length > 0 && <> · <span className="legende-a-venir">{plage(aVenir[0], aVenir[aVenir.length - 1])} : objectifs</span></>}
+            {!enCours && aVenir.length === 0 && " · tout est réel"}
+            {comparaisons.length > 0 && <> · comparé au réel de {comparaisons.map((c) => anneeComparee(c.decalage)).join(", ")}</>}
+          </p>
+          {nbARevoir > 0 && (
+            <p className="sous">
+              <span className="pastille">à revoir</span> {nbARevoir} objectif{nbARevoir > 1 ? "s" : ""} ne correspond
+              {nbARevoir > 1 ? "ent" : ""} plus aux 12 derniers mois : ouvrez la catégorie puis « objectif » pour voir la suggestion.
+            </p>
+          )}
+          <p className="sous">
+            Moy. = total ÷ 12. Objectif / Écart : votre objectif saisi et l'écart avec la prévision. « Comparé à … » : le réel
+            des mêmes mois cette année-là ; l'écart (vert = mieux, rouge = moins bien) est la prévision moins ce réel.
+            Régulier : on ajoute les opérations encore attendues ce mois-ci. Variable : on ajoute l'objectif au prorata des jours restants.
+          </p>
+        </div>
+      )}
 
       {objectifs.size === 0 && (
         <div className="carte">
@@ -416,13 +435,6 @@ export default function Previsionnel() {
           <button className="principal" disabled={envoi} onClick={preRemplir}>Pré-remplir les objectifs</button>
         </div>
       )}
-      {nbARevoir > 0 && (
-        <p className="sous">
-          <span className="pastille">à revoir</span> {nbARevoir} objectif{nbARevoir > 1 ? "s" : ""} ne correspond
-          {nbARevoir > 1 ? "ent" : ""} plus aux 12 derniers mois : ouvrez la catégorie puis « objectif » pour voir la suggestion.
-        </p>
-      )}
-
       <div className="carte tableau-bilan tableau-prev">
         <table>
           <thead>
@@ -468,12 +480,6 @@ export default function Previsionnel() {
           )}
         </table>
       </div>
-      <p className="sous">
-        Moy. = total ÷ 12. Objectif / Écart : votre objectif saisi et l'écart avec la prévision. « Comparé à … » : le réel
-        des mêmes mois cette année-là ; l'écart (vert = mieux, rouge = moins bien) est la prévision moins ce réel. Case
-        « Comparer chaque mois » : sous chaque montant, le même mois de l'année comparée. Régulier : on ajoute les opérations
-        encore attendues ce mois-ci. Variable : on ajoute l'objectif au prorata des jours restants.
-      </p>
     </section>
   );
 }

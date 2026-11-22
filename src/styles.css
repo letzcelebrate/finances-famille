@@ -357,3 +357,13 @@ table.table-synthese td:nth-child(3) { white-space: nowrap; }
   .saisie-cash input, .saisie-cash select { font-size: 1rem; padding: 13px 14px; }
   .cash-go { width: 100%; padding: 14px; font-size: 1rem; }
 }
+
+/* Bouton d'info (ⓘ) et panneau explicatif de Prév & Targets */
+.info-bouton { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px;
+  border-radius: 50%; border: 1px solid var(--bord); background: var(--carte); color: var(--discret);
+  cursor: pointer; font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 700; font-size: 0.9rem; line-height: 1; }
+.info-bouton:hover { border-color: var(--accent); color: var(--accent); }
+.info-bouton[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--carte)); }
+.info-panneau { padding: 14px 16px; }
+.info-panneau p { margin: 0 0 8px; }
+.info-panneau p:last-child { margin-bottom: 0; }
