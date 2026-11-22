@@ -17,6 +17,7 @@ import {
   type CompteImport,
 } from "../lib/import/donnees";
 import { EditeurDivision, partsInitiales, partsValides, SelectPoste, usePostes, type Part } from "../components/Classement";
+import { useEstMobile } from "../lib/mobile";
 
 type Ligne = {
   cle: number;
@@ -249,6 +250,7 @@ export default function Import() {
     cash.poste_id !== null &&
     !!cash.date;
 
+  const estMobile = useEstMobile();
   const incluses = lignes.filter((l) => l.inclure);
   const total = incluses.reduce((s, l) => s + l.montant, 0);
   const aClasser = incluses.filter((l) => !estClassee(l)).length;
@@ -263,11 +265,13 @@ export default function Import() {
 
       {etat === "choix" && (
         <>
-          <div className="carte">
-            <h2>Importer un relevé</h2>
-            <p className="sous">Fichier CSV téléchargé depuis Raiffeisen (compte courant ou relevé de carte Visa), sans l'ouvrir dans Excel.</p>
-            <input type="file" accept=".csv,text/csv" onChange={(e) => e.target.files?.[0] && analyser(e.target.files[0])} />
-          </div>
+          {!estMobile && (
+            <div className="carte">
+              <h2>Importer un relevé</h2>
+              <p className="sous">Fichier CSV téléchargé depuis Raiffeisen (compte courant ou relevé de carte Visa), sans l'ouvrir dans Excel.</p>
+              <input type="file" accept=".csv,text/csv" onChange={(e) => e.target.files?.[0] && analyser(e.target.files[0])} />
+            </div>
+          )}
 
           {cashComptes.length > 0 && (
             <div className="carte">
@@ -305,7 +309,7 @@ export default function Import() {
                 )}
               </div>
               <p>
-                <button className="principal" disabled={cashEnvoi || !cashPret} onClick={enregistrerCash}>
+                <button className="principal cash-go" disabled={cashEnvoi || !cashPret} onClick={enregistrerCash}>
                   {cashEnvoi ? "Enregistrement…" : "Enregistrer la dépense"}
                 </button>
               </p>

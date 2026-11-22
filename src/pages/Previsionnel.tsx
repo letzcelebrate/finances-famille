@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "../lib/supabase";
 import { formatDate, formatMontant } from "../lib/format";
 import { lireSaisie, usePostes } from "../components/Classement";
+import { useEstMobile } from "../lib/mobile";
 import { organiserBilan, NOM_NEUTRES, type BlocCategorie, type LigneBilanBrute, type Montants } from "../lib/bilan";
 import {
   aRevoir, cleMois, decaler, ilYaNAns, periode, prevoirPoste, reference, statut, suggererObjectif, TOUS_LES_MOIS,
@@ -78,6 +79,7 @@ type Comparaison = { decalage: number; bilan: ReturnType<typeof organiserBilan> 
 
 export default function Previsionnel() {
   const { postes } = usePostes();
+  const estMobile = useEstMobile();
   const [donnees, setDonnees] = useState<{
     ref: Reference;
     jour: Date;
@@ -238,6 +240,50 @@ export default function Previsionnel() {
   const passes = per.filter((_, i) => statuts[i] === "passe");
   const enCours = per.find((_, i) => statuts[i] === "en-cours");
   const aVenir = per.filter((_, i) => statuts[i] === "a-venir");
+
+  // Version app (téléphone) : uniquement le mois en cours, réel/prévu face à l'objectif du mois.
+  if (estMobile) {
+    const i = statuts.findIndex((s) => s === "en-cours");
+    const iMois = i >= 0 ? i : 6;
+    const m = (x: Montants) => x.mois[iMois];
+    return (
+      <section>
+        <div className="carte prev-mobile">
+          <h2>{majuscule(nomLong(per[iMois]))}</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Poste</th>
+                <th className="droite">Ce mois</th>
+                <th className="droite">Objectif</th>
+                <th className="droite">Écart</th>
+              </tr>
+            </thead>
+            <tbody>
+              {prev.categories.map((c, k) => {
+                const o = obj.categories[k];
+                return (
+                  <tr key={c.nom} className="cat">
+                    <th scope="row" className="col-poste">{c.nom}</th>
+                    <Cellule valeur={m(c.sousTotal)} />
+                    <Cellule valeur={m(o.sousTotal)} />
+                    <Cellule valeur={arr(m(c.sousTotal) - m(o.sousTotal))} />
+                  </tr>
+                );
+              })}
+              <tr className="resultat">
+                <th scope="row" className="col-poste">Résultat</th>
+                <Cellule valeur={m(prev.resultat)} />
+                <Cellule valeur={m(obj.resultat)} />
+                <Cellule valeur={arr(m(prev.resultat) - m(obj.resultat))} />
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    );
+  }
+
   const enteteMois = (m: MoisAbs) => (vue === "glissant" ? `${MOIS_COURTS[m.mois - 1]} ${String(m.annee).slice(2)}` : MOIS_COURTS[m.mois - 1]);
   const libellePeriode = majuscule(plage(per[0], per[11]));
   const motTotal = vue === "civile" ? "année" : "12 mois";

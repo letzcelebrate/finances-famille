@@ -5,6 +5,7 @@ import { diviserOperation, modifierOperation, operationsDuTiers, reclasser } fro
 import { EditeurDivision, partsInitiales, partsValides, SelectPoste, usePostes, type GroupesPostes, type Part } from "../components/Classement";
 import { appliquerFiltres, colonnesActives, FILTRES_VIDES, type Filtres } from "../lib/filtresOperations";
 import { EnTeteFiltre, FiltreComptes, FiltreDate, FiltreMontant, FiltrePostes, FiltreTexte } from "../components/FiltresColonnes";
+import { useEstMobile } from "../lib/mobile";
 
 type Compte = { id: number; banque: string; nom: string; ouvert: boolean };
 type Ventil = { id: number; poste_id: number; poste_nom: string; montant: number; note: string | null };
@@ -43,6 +44,7 @@ export default function Operations({ compteInitial }: { compteInitial: number | 
   const [erreur, setErreur] = useState<string | null>(null);
   const [ouverte, setOuverte] = useState<number | null>(null);
   const [version, setVersion] = useState(0);
+  const estMobile = useEstMobile();
 
   useEffect(() => {
     supabase
@@ -109,6 +111,53 @@ export default function Operations({ compteInitial }: { compteInitial: number | 
   }, [filtres, page, version]);
 
   const pages = Math.max(1, Math.ceil(nombre / PAR_PAGE));
+
+  // Version app (téléphone) : recherche seule, résultats en liste de cartes.
+  if (estMobile) {
+    const recherche = filtres.texte.trim();
+    return (
+      <section>
+        <div className="carte recherche-mobile">
+          <input type="search" inputMode="search" placeholder="Rechercher une opération…"
+            value={filtres.texte} onChange={(e) => changerFiltres({ texte: e.target.value })} />
+        </div>
+        {erreur && <p className="alerte">Erreur : {erreur}</p>}
+        {recherche === "" ? (
+          <p className="indice-recherche">Tape un mot (commerçant, libellé, note…) pour retrouver une opération.</p>
+        ) : !operations ? (
+          <p className="indice-recherche">Recherche…</p>
+        ) : operations.length === 0 ? (
+          <p className="indice-recherche">Aucune opération trouvée.</p>
+        ) : (
+          <div className="liste-ops-mobile">
+            {operations.map((o) => (
+              <Fragment key={o.id}>
+                <button type="button" className={`op-carte ${ouverte === o.id ? "ouverte" : ""}`}
+                  onClick={() => setOuverte(ouverte === o.id ? null : o.id)}>
+                  <span className="op-haut">
+                    <span className="op-lib">{o.libelle}</span>
+                    <span className={`op-montant ${o.montant < 0 ? "negatif" : "positif"}`}>{formatMontant(o.montant, o.devise)}</span>
+                  </span>
+                  <span className="op-bas sous">
+                    {formatDate(o.date_operation)} · {o.ventilations.length > 0 ? "Divisée" : (o.poste_nom ?? "à classer")}
+                  </span>
+                </button>
+                {ouverte === o.id && (
+                  <div className="carte">
+                    <EditeurOperation op={o} groupes={groupes}
+                      onFini={() => { setOuverte(null); setVersion((v) => v + 1); }} />
+                  </div>
+                )}
+              </Fragment>
+            ))}
+            {nombre > operations.length && (
+              <p className="indice-recherche">{nombre.toLocaleString("fr-FR")} résultats — précise ta recherche pour en voir moins.</p>
+            )}
+          </div>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section>
