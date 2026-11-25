@@ -153,15 +153,19 @@ export default function Import() {
     setLignes(
       nouvelles.map((l, i) => {
         const p = proposer(l.libelle);
-        // conserver ce qui a déjà été saisi à la main (ex. après création d'une règle)
-        const avant = garder.find((g) => g.cle === i && g.modifie);
+        // conserver ce qui a déjà été saisi à la main (ex. après création d'une règle) :
+        // case « importer », note et choix de la carte toujours ; poste / division
+        // seulement s'ils ont été corrigés (sinon la nouvelle règle s'applique).
+        const avant = garder.find((g) => g.cle === i);
         const base = {
           ...l, cle: i, proposition: p, poste_id: p.poste_id, note: "", parts: null, modifie: false, inclure: true,
           decompte: attributions.get(i) ?? null,
         };
-        return avant
-          ? { ...base, poste_id: avant.poste_id, note: avant.note, parts: avant.parts, modifie: true, inclure: avant.inclure, decompte: avant.decompte }
-          : base;
+        if (!avant) return base;
+        const saisie = { ...base, note: avant.note, inclure: avant.inclure, decompte: avant.decompte };
+        return avant.modifie
+          ? { ...saisie, poste_id: avant.poste_id, parts: avant.parts, modifie: true }
+          : saisie;
       }),
     );
     setAnalyse({ nomFichier, fichier, compte, dejaPresentes: presentes.length, solde });
@@ -176,6 +180,7 @@ export default function Import() {
       await preparer(analyse.nomFichier, analyse.fichier, { ...compte, identifiant_import: analyse.fichier.identifiant });
     } catch (e) {
       setErreur((e as Error).message);
+      setEtat("revue"); // ne pas rester bloqué sur « Analyse du fichier… »
     }
   }
 
@@ -237,6 +242,7 @@ export default function Import() {
       if (analyse?.compte) await preparer(analyse.nomFichier, analyse.fichier, analyse.compte, lignes);
     } catch (e) {
       setErreur((e as Error).message);
+      setEtat("revue"); // ne pas rester bloqué sur « Analyse du fichier… »
     }
   }
 

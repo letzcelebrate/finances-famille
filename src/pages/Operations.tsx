@@ -6,6 +6,7 @@ import { EditeurDivision, partsInitiales, partsValides, SelectPoste, usePostes, 
 import { appliquerFiltres, colonnesActives, FILTRES_VIDES, raccourcisDates, type Filtres, type Sens } from "../lib/filtresOperations";
 import { EnTeteFiltre, FiltreComptes, FiltreDate, FiltreMontant, FiltrePostes, FiltreTexte } from "../components/FiltresColonnes";
 import { useEstMobile } from "../lib/mobile";
+import { celluleBrute, celluleTexte } from "../lib/csv";
 
 type Compte = { id: number; banque: string; nom: string; ouvert: boolean };
 type Ventil = { id: number; poste_id: number; poste_nom: string; montant: number; note: string | null };
@@ -140,15 +141,13 @@ export default function Operations({ compteInitial }: { compteInitial: number | 
         lignes.push(...(data ?? []));
         if (!data || data.length < 1000) break;
       }
-      const esc = (v: unknown) => {
-        const s = String(v ?? "");
-        return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-      };
       const entete = ["Date", "Libellé", "Note", "Compte", "Poste", "Catégorie", "Montant", "Devise"];
       const corps = lignes.map((o) => [
-        o.date_operation, o.libelle, o.note ?? "", `${o.banque} — ${o.compte_nom}`, o.poste_nom ?? "", o.categorie_nom ?? "",
-        Number(o.montant).toFixed(2).replace(".", ","), o.devise,
-      ].map(esc).join(";"));
+        celluleBrute(o.date_operation),
+        ...[o.libelle, o.note ?? "", `${o.banque} — ${o.compte_nom}`, o.poste_nom ?? "", o.categorie_nom ?? ""].map(celluleTexte),
+        celluleBrute(Number(o.montant).toFixed(2).replace(".", ",")),
+        celluleTexte(o.devise),
+      ].join(";"));
       const csv = "﻿" + [entete.join(";"), ...corps].join("\r\n");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
