@@ -199,7 +199,12 @@ export default function Import() {
     if (!analyse || compteChoisi === "") return;
     const compte = comptes.find((c) => c.id === compteChoisi)!;
     try {
-      if (memoriser) await memoriserIdentifiant(compte.id, analyse.fichier.identifiant, analyse.fichier.format);
+      if (memoriser) {
+        await memoriserIdentifiant(compte.id, analyse.fichier.identifiant, analyse.fichier.format);
+        // le fichier suivant de ce compte doit être reconnu sans recharger la page
+        const identifiant = analyse.fichier.identifiant;
+        setComptes((cs) => cs.map((c) => (c.id === compte.id ? { ...c, identifiant_import: identifiant } : c)));
+      }
       await preparer(analyse.nomFichier, analyse.fichier, { ...compte, identifiant_import: analyse.fichier.identifiant });
     } catch (e) {
       setErreur((e as Error).message);
