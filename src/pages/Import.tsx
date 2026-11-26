@@ -111,7 +111,8 @@ export default function Import() {
 
   // cartes de la même banque, encore ouvertes (destinataires possibles d'un décompte Visa)
   const cartesDe = (compte: CompteImport) =>
-    comptes.filter((c) => c.ouvert && c.type_compte === "Carte Bancaire" && c.banque === compte.banque);
+    comptes.filter((c) => c.ouvert && c.type_compte === "Carte Bancaire" && c.banque === compte.banque
+      && c.groupe === compte.groupe);
   // compte de retraite Vitis Life (destinataire des versements Vitis du compte courant)
   const retraitesVitis = () =>
     comptes.filter((c) => c.ouvert && c.type_compte === "Retraite" && /vitis/i.test(c.banque));
@@ -139,7 +140,8 @@ export default function Import() {
     setEtat("analyse");
     const depuis = fichier.lignes.map((l) => l.date_operation).sort()[0];
     const cartes = fichier.format === "raiffeisen_compte" ? cartesDe(compte) : [];
-    const retraite = fichier.format === "raiffeisen_compte" ? retraitesVitis()[0] ?? null : null;
+    const retraite = fichier.format === "raiffeisen_compte" && compte.groupe === "Famille"
+      ? retraitesVitis()[0] ?? null : null;
     const [existantes, historique, regles, solde, mouvementsCartes] = await Promise.all([
       chargerExistantes(compte.id, depuis),
       chargerHistorique(),

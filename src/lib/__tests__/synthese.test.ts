@@ -47,3 +47,29 @@ describe("construireSynthese", () => {
     expect(r.blocs[0].titre).toBe("Autres comptes courants");
   });
 });
+
+describe("construireSynthese : groupes Enfants et LetzCelebrate", () => {
+  const g = (banque: string, nom: string, type_compte: string, solde: number, groupe: string): Solde => ({
+    ...c(banque, nom, type_compte, solde), groupe,
+  });
+  const t = construireSynthese([
+    g("Raiffeisen", "Compte Courant", "Courant", 200, "Famille"),
+    g("Vitis Life", "Retraite Vitis", "Retraite", 1000, "Famille"),
+    g("Raiffeisen", "Visa LetzCelebrate", "Carte Bancaire", -50, "LetzCelebrate"),
+    g("Raiffeisen", "Compte Courant LetzCelebrate", "Courant", 800, "LetzCelebrate"),
+    g("Raiffeisen", "Compte Epargne Tom", "Epargne", 100, "Enfants"),
+    g("Raiffeisen", "Compte Epargne Max", "Epargne", 340.2, "Enfants"),
+  ]);
+
+  it("affiche Enfants puis LetzCelebrate après la retraite", () => {
+    expect(t.blocs.map((b) => b.titre)).toEqual(["Raiffeisen", "Retraite", "Enfants", "LetzCelebrate"]);
+    expect(t.blocs.find((b) => b.titre === "Enfants")!.total).toBe(440.2);
+    expect(t.blocs.find((b) => b.titre === "LetzCelebrate")!.total).toBe(750);
+  });
+
+  it("les exclut du patrimoine de la famille", () => {
+    expect(t.total).toBe(1200);
+    expect(t.disponible).toBe(200);
+    expect(t.blocs.filter((b) => b.horsPatrimoine).map((b) => b.titre)).toEqual(["Enfants", "LetzCelebrate"]);
+  });
+});

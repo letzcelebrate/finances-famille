@@ -10,7 +10,7 @@ export default function Synthese({ onChoisirCompte }: { onChoisirCompte: (id: nu
   useEffect(() => {
     supabase
       .from("v_soldes_comptes")
-      .select("compte_id, banque, nom, type_compte, devise, ouvert, solde, derniere_operation")
+      .select("compte_id, banque, nom, type_compte, devise, ouvert, solde, derniere_operation, groupe")
       .eq("ouvert", true)
       .order("banque")
       .order("nom")
@@ -40,7 +40,7 @@ export default function Synthese({ onChoisirCompte }: { onChoisirCompte: (id: nu
         return (
           <div key={g.titre} className="carte">
             <div className="groupe-titre">
-              <h2>{g.titre}</h2>
+              <h2>{g.titre}{g.horsPatrimoine && <span className="sous"> · hors patrimoine</span>}</h2>
               <strong className={sousTotal < 0 ? "negatif" : ""}>{formatMontant(sousTotal)}</strong>
             </div>
             <table className="table-synthese">

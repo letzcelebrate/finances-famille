@@ -10,6 +10,7 @@ export type CompteImport = {
   identifiant_import: string | null;
   ouvert: boolean;
   type_compte: string;
+  groupe: string; // Famille, Enfants ou LetzCelebrate
 };
 
 export type Poste = { id: number; nom: string; categorie: string; rang: number; ordre: number };
@@ -28,7 +29,7 @@ async function toutLire<T>(construire: () => any): Promise<T[]> {
 export async function chargerComptes(): Promise<CompteImport[]> {
   const { data, error } = await supabase
     .from("comptes")
-    .select("id, banque, nom, titulaire, devise, identifiant_import, ouvert, type_compte")
+    .select("id, banque, nom, titulaire, devise, identifiant_import, ouvert, type_compte, groupe")
     .order("banque")
     .order("nom");
   if (error) throw new Error(error.message);

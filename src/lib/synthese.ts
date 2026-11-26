@@ -9,20 +9,27 @@ export type Solde = {
   ouvert: boolean;
   solde: number;
   derniere_operation: string | null;
+  /** Famille (par défaut), Enfants ou LetzCelebrate : ces deux derniers sont hors patrimoine */
+  groupe?: string;
 };
 
-export type Bloc = { titre: string; comptes: Solde[]; total: number };
+export type Bloc = { titre: string; comptes: Solde[]; total: number; horsPatrimoine: boolean };
 export type Synthese = { blocs: Bloc[]; total: number; disponible: number };
 
 const TITRE_RAIFFEISEN = "Raiffeisen";
 const TITRE_AUTRES = "Autres comptes courants";
 const TITRE_EPARGNE = "Épargne";
 const TITRE_RETRAITE = "Retraite";
+/** Groupes affichés à part, après la retraite, et exclus du patrimoine de la famille */
+const GROUPES_A_PART = ["Enfants", "LetzCelebrate"];
+
+const estFamille = (s: Solde) => !GROUPES_A_PART.includes(s.groupe ?? "Famille");
 
 /** Ordre des banques dans « Autres comptes courants » ; les autres suivent par ordre alphabétique. */
 const ORDRE_AUTRES = ["Cash", "Revolut", "Boursorama"];
 
 function bloc(s: Solde): string {
+  if (!estFamille(s)) return s.groupe!;
   if (s.type_compte === "Retraite") return TITRE_RETRAITE;
   if (s.type_compte === "Epargne" || s.type_compte === "Titres") return TITRE_EPARGNE;
   if (s.banque === "Raiffeisen" && (s.type_compte === "Courant" || s.type_compte === "Carte Bancaire")) return TITRE_RAIFFEISEN;
@@ -56,14 +63,14 @@ function trier(titre: string, comptes: Solde[]): Solde[] {
 const somme = (comptes: Solde[]) => comptes.reduce((t, s) => t + Math.round(s.solde * 100), 0) / 100;
 
 export function construireSynthese(soldes: Solde[]): Synthese {
-  const ordre = [TITRE_RAIFFEISEN, TITRE_AUTRES, TITRE_EPARGNE, TITRE_RETRAITE];
+  const ordre = [TITRE_RAIFFEISEN, TITRE_AUTRES, TITRE_EPARGNE, TITRE_RETRAITE, ...GROUPES_A_PART];
   const blocs = ordre
     .map((titre) => {
       const comptes = trier(titre, soldes.filter((s) => bloc(s) === titre));
-      return { titre, comptes, total: somme(comptes) };
+      return { titre, comptes, total: somme(comptes), horsPatrimoine: GROUPES_A_PART.includes(titre) };
     })
     .filter((b) => b.comptes.length > 0);
-  const total = somme(soldes);
+  const total = somme(soldes.filter(estFamille));
   const retraite = blocs.find((b) => b.titre === TITRE_RETRAITE)?.total ?? 0;
   return { blocs, total, disponible: Math.round((total - retraite) * 100) / 100 };
 }
