@@ -6,6 +6,8 @@ export type Filtres = {
   /** dates réelles d'opération, au format AAAA-MM-JJ (vide = pas de limite) */
   du: string;
   au: string;
+  /** mois de rattachement (AAAA-MM-01, vide = tous) : sert au lien depuis Prév & Targets */
+  mois: string;
   /** texte cherché dans le libellé ou la note */
   texte: string;
   /** comptes retenus ; null = tous */
@@ -21,7 +23,7 @@ export type Filtres = {
 };
 
 export const FILTRES_VIDES: Filtres = {
-  du: "", au: "", texte: "", comptes: null, postes: null, aClasser: true,
+  du: "", au: "", mois: "", texte: "", comptes: null, postes: null, aClasser: true,
   montantMin: "", montantMax: "", sens: "tous",
 };
 
@@ -29,7 +31,7 @@ export type Colonne = "date" | "libelle" | "compte" | "poste" | "montant";
 
 export function colonnesActives(f: Filtres): Set<Colonne> {
   const s = new Set<Colonne>();
-  if (f.du || f.au) s.add("date");
+  if (f.du || f.au || f.mois) s.add("date");
   if (f.texte.trim()) s.add("libelle");
   if (f.comptes !== null) s.add("compte");
   if (f.postes !== null) s.add("poste");
@@ -57,6 +59,7 @@ export interface Requete<T> {
   lt(col: string, v: number): T;
   gt(col: string, v: number): T;
   in(col: string, v: number[]): T;
+  eq(col: string, v: string): T;
   or(expr: string): T;
 }
 
@@ -70,6 +73,7 @@ export function appliquerFiltres<T extends Requete<T>>(q: T, f: Filtres, operati
   const ous: string[] = [];
   if (f.du) r = r.gte("date_operation", f.du);
   if (f.au) r = r.lte("date_operation", f.au);
+  if (f.mois) r = r.eq("mois_rattachement", f.mois);
 
   const t = texteSur(f.texte);
   if (t) ous.push(`libelle.ilike.%${t}%,note.ilike.%${t}%`);

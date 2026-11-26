@@ -5,6 +5,7 @@ import { useEstMobile } from "./lib/mobile";
 import Connexion from "./pages/Connexion";
 import Synthese from "./pages/Synthese";
 import Operations from "./pages/Operations";
+import { FILTRES_VIDES, type Filtres } from "./lib/filtresOperations";
 import Import from "./pages/Import";
 import BilanMois from "./pages/BilanMois";
 import Previsionnel from "./pages/Previsionnel";
@@ -44,7 +45,12 @@ export default function App() {
   const [chargement, setChargement] = useState(true);
   const [membre, setMembre] = useState<boolean | null>(null);
   const [onglet, setOnglet] = useState<Onglet>("synthese");
-  const [compteChoisi, setCompteChoisi] = useState<number | null>(null);
+  // filtres à appliquer en arrivant sur Opérations (depuis la Synthèse ou Prév & Targets)
+  const [filtresOps, setFiltresOps] = useState<Filtres | null>(null);
+  const voirOperations = (f: Filtres) => {
+    setFiltresOps(f);
+    setOnglet("operations");
+  };
   const estMobile = useEstMobile();
   const onglets = estMobile ? ONGLETS.filter((o) => ONGLETS_MOBILE.includes(o.id)) : ONGLETS;
 
@@ -80,7 +86,7 @@ export default function App() {
         <nav className="onglets" aria-label="Navigation">
           {onglets.map((o) => (
             <button key={o.id} className={onglet === o.id ? "actif" : ""} aria-current={onglet === o.id ? "page" : undefined}
-              data-court={o.court} onClick={() => setOnglet(o.id)}>
+              data-court={o.court} onClick={() => { setFiltresOps(null); setOnglet(o.id); }}>
               {ICONES[o.id]}
               <span className="lbl">{o.libelle}</span>
             </button>
@@ -96,15 +102,12 @@ export default function App() {
         )}
         {membre && onglet === "synthese" && (
           <Synthese
-            onChoisirCompte={(id) => {
-              setCompteChoisi(id);
-              setOnglet("operations");
-            }}
+            onChoisirCompte={(id) => voirOperations({ ...FILTRES_VIDES, comptes: [id] })}
           />
         )}
-        {membre && onglet === "operations" && <Operations compteInitial={compteChoisi} />}
+        {membre && onglet === "operations" && <Operations filtresInitiaux={filtresOps} />}
         {membre && onglet === "bilan-mois" && <BilanMois />}
-        {membre && onglet === "previsionnel" && <Previsionnel />}
+        {membre && onglet === "previsionnel" && <Previsionnel onVoirOperations={voirOperations} />}
         {membre && onglet === "soldes" && <SoldesAnnuels />}
         {membre && onglet === "import" && <Import />}
       </main>

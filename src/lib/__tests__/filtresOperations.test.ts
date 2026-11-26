@@ -10,6 +10,7 @@ class Espion implements Requete<Espion> {
   lt(c: string, v: number) { return this.n(`lt ${c} ${v}`); }
   gt(c: string, v: number) { return this.n(`gt ${c} ${v}`); }
   in(c: string, v: number[]) { return this.n(`in ${c} ${v.join("|")}`); }
+  eq(c: string, v: string) { return this.n(`eq ${c} ${v}`); }
   or(e: string) { return this.n(`or ${e}`); }
 }
 const appels = (f: Partial<Filtres>, divisees: number[] = []) =>
@@ -22,6 +23,11 @@ describe("appliquerFiltres", () => {
     expect(appels({ du: "2026-01-01", au: "2026-01-31" })).toEqual([
       "gte date_operation 2026-01-01", "lte date_operation 2026-01-31",
     ]);
+  });
+
+  it("mois de rattachement", () => {
+    expect(appels({ mois: "2026-07-01" })).toEqual(["eq mois_rattachement 2026-07-01"]);
+    expect(colonnesActives({ ...FILTRES_VIDES, mois: "2026-07-01" }).has("date")).toBe(true);
   });
 
   it("texte dans le libellé ou la note, caractères spéciaux retirés", () => {

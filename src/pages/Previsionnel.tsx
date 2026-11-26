@@ -1,3 +1,4 @@
+import { FILTRES_VIDES, type Filtres } from "../lib/filtresOperations";
 import { Fragment, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { supabase } from "../lib/supabase";
 import { formatDate, formatMontant } from "../lib/format";
@@ -54,7 +55,7 @@ function CelluleEcart({ valeur, classe = "" }: { valeur: number; classe?: string
   );
 }
 
-/** Cellule d'un mois ; cliquable (postes) pour ouvrir l'éditeur rapide de target. */
+/** Cellule d'un mois ; cliquable : opérations du mois (passé, en cours) ou éditeur rapide de target (à venir). */
 function CelluleMois({ valeur, classe = "", onClick }: {
   valeur: number; classe?: string; onClick?: (e: MouseEvent<HTMLTableCellElement>) => void;
 }) {
@@ -70,7 +71,7 @@ function CelluleMois({ valeur, classe = "", onClick }: {
 /** Une comparaison affichée : le décalage (en années) et le bilan réel correspondant. */
 type Comparaison = { decalage: number; bilan: ReturnType<typeof organiserBilan> };
 
-export default function Previsionnel() {
+export default function Previsionnel({ onVoirOperations }: { onVoirOperations: (f: Filtres) => void }) {
   const { postes } = usePostes();
   const estMobile = useEstMobile();
   const [donnees, setDonnees] = useState<{
@@ -83,6 +84,8 @@ export default function Previsionnel() {
     passe: Map<number, Historique>;
     objectifs: Objectif[];
     derniere: string | null;
+    /** comptes inclus dans le tableau (lien vers Opérations) */
+    comptesInclus: number[];
   } | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
@@ -119,6 +122,8 @@ export default function Previsionnel() {
         supabase.rpc("historique_postes", { p_debut: iso(decaler(ref, -24)), p_fin: iso(ref), p_groupes }),
         supabase.from("objectifs").select("poste_id, mode, montant, nb_operations, mois"),
       ]);
+      const { data: cpts, error: e2 } = await supabase.from("comptes").select("id, groupe");
+      if (e2) return !annule && setErreur(e2.message);
       if (annule) return;
       const err = bilans.find((b) => b.error)?.error ?? hn.error ?? hp.error ?? ob.error;
       if (err) return setErreur(err.message);
@@ -140,6 +145,8 @@ export default function Previsionnel() {
           nb_operations: o.nb_operations, mois: (o.mois as number[]).map(Number),
         })),
         derniere: (derniere as string | null) ?? null,
+        comptesInclus: ((cpts ?? []) as { id: number; groupe: string }[])
+          .filter((c) => p_groupes.includes(c.groupe)).map((c) => Number(c.id)),
       });
     })();
     return () => {
@@ -304,19 +311,33 @@ export default function Previsionnel() {
     });
   const nbARevoir = [...objectifs.values()].filter((o) => aRevoir(o, suggestions.get(o.poste_id) ?? null)).length;
 
+  // Mois passés et mois en cours : voir les opérations ; mois à venir : objectif mensuel
+  const cliquerMois = (postesIds: number[], posteId: number | undefined, nom: string, i: number, el: HTMLElement) => {
+    if (statuts[i] === "a-venir") {
+      if (posteId !== undefined) ouvrirCible(posteId, nom, i, el);
+      return;
+    }
+    onVoirOperations({
+      ...FILTRES_VIDES, postes: postesIds, aClasser: false, mois: iso(per[i]), comptes: donnees.comptesInclus,
+    });
+  };
+
   const ouvrirCible = (posteId: number, nom: string, i: number, el: HTMLElement) => {
     const r = el.getBoundingClientRect();
     setCible({ posteId, nom, moisLabel: majuscule(nomLong(per[i])), x: Math.min(r.left, window.innerWidth - 290), y: r.bottom + 4 });
   };
 
-  const ligne = ({ nom, p, o, cmps, classe, avant: debut, apres, posteId }: {
+  const ligne = ({ nom, p, o, cmps, classe, avant: debut, apres, posteId, postesIds }: {
     nom: string; p: Montants; o: Montants; cmps: Montants[]; classe?: string; avant?: ReactNode; apres?: ReactNode; posteId?: number;
+    /** postes de la ligne (un poste, ou tous ceux d'une catégorie) */
+    postesIds?: number[];
   }) => (
       <tr className={classe}>
         <th scope="row" className="col-poste">{debut}{nom}{apres}</th>
         {p.mois.map((v, i) => (
           <CelluleMois key={i} valeur={v} classe={classeMois(i)}
-            onClick={posteId !== undefined ? (e) => ouvrirCible(posteId, nom, i, e.currentTarget) : undefined} />
+            onClick={postesIds && postesIds.length > 0 && (statuts[i] !== "a-venir" || posteId !== undefined)
+              ? (e) => cliquerMois(postesIds, posteId, nom, i, e.currentTarget) : undefined} />
         ))}
         <Cellule valeur={val(p.total)} classe="col-resume col-prev bord" />
         <Cellule valeur={val(o.total)} classe="col-resume" />
@@ -341,6 +362,7 @@ export default function Previsionnel() {
       <tbody key={bp.nom}>
         {ligne({ nom: bp.nom, p: bp.sousTotal, o: bo.sousTotal, cmps: bcs.map((b) => b.sousTotal),
           classe: `categorie ${ouverte ? "ouverte" : ""}`,
+          postesIds: bp.postes.map((pp) => ids.get(pp.nom)).filter((x): x is number => x !== undefined),
           avant: (
             <button type="button" className="plus-moins" aria-expanded={ouverte} onClick={() => basculer(bp.nom)}
               title={ouverte ? `Masquer le détail de ${bp.nom}` : `Voir le détail de ${bp.nom}`}>
@@ -359,6 +381,7 @@ export default function Previsionnel() {
               <Fragment key={pp.nom}>
                 {ligne({ nom: pp.nom, p: pp.montants, o: bo.postes[i].montants, cmps: bcs.map((b) => b.postes[i].montants),
                   posteId: id,
+                  postesIds: id !== undefined ? [id] : [],
                   classe: `poste ${edition === id ? "ouverte" : ""}`,
                   apres: (
                     <>

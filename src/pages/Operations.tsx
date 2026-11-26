@@ -28,14 +28,16 @@ type Operation = {
 const PAR_PAGE = 100;
 /** Au-delà, le total de la sélection n'est pas calculé (trop de lignes à additionner). */
 const MAX_TOTAL = 5000;
+
+/** « 2026-07-01 » → « juillet 2026 » */
+const nomMois = (iso: string) =>
+  new Date(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 const COLONNES = "id, date_operation, libelle, note, montant, devise, banque, compte_nom, poste_id, poste_nom, categorie_nom, ventilations";
 
-export default function Operations({ compteInitial }: { compteInitial: number | null }) {
+export default function Operations({ filtresInitiaux }: { filtresInitiaux: Filtres | null }) {
   const [comptes, setComptes] = useState<Compte[]>([]);
   const { groupes } = usePostes();
-  const [filtres, setFiltres] = useState<Filtres>(
-    compteInitial !== null ? { ...FILTRES_VIDES, comptes: [compteInitial] } : FILTRES_VIDES,
-  );
+  const [filtres, setFiltres] = useState<Filtres>(filtresInitiaux ?? FILTRES_VIDES);
   const changerFiltres = (f: Partial<Filtres>) => setFiltres((ancien) => ({ ...ancien, ...f }));
   const actives = colonnesActives(filtres);
   const [page, setPage] = useState(0);
@@ -226,6 +228,12 @@ export default function Operations({ compteInitial }: { compteInitial: number | 
       <div className="resume">
         <span>
           {nombre.toLocaleString("fr-FR")} opération{nombre > 1 ? "s" : ""}
+          {filtres.mois && (
+            <>
+              {" "}· <span className="sous">rattachées à {nomMois(filtres.mois)}</span>{" "}
+              <button className="lien petit" title="Retirer ce filtre" onClick={() => changerFiltres({ mois: "" })}>✕</button>
+            </>
+          )}
           {actives.size > 0 && (
             <>
               {" "}· <button className="lien petit" onClick={() => setFiltres(FILTRES_VIDES)}>Effacer tous les filtres</button>
