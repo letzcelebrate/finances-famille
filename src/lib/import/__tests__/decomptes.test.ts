@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attribuerCartes, dateReleve, type CarteDecompte } from "../decomptes";
+import { attribuerCartes, attribuerRetraite, dateReleve, estVersementVitis, type CarteDecompte } from "../decomptes";
 
 // Montants fictifs
 const carteA = (): CarteDecompte => ({
@@ -76,5 +76,43 @@ describe("décomptes Visa", () => {
     );
     expect(r.has(0)).toBe(false);
     expect(r.get(1)).toEqual({ carte_id: null, deja_presente: false });
+  });
+});
+
+describe("versements Vitis Life", () => {
+  const sa = "Vitis Life, LU027050K00175010000, Sandrine ALEDO GIRAUD, Contrat 85E00193 OPTIMUM, 9001078119";
+  const mg = "Vitis Life, LU027050K00175010000, Marc GIRAUD, Contrat numéro 85E00194, 9001078220";
+
+  it("reconnaît les virements vers un contrat Vitis Life", () => {
+    expect(estVersementVitis(sa)).toBe(true);
+    expect(estVersementVitis(mg)).toBe(true);
+    expect(estVersementVitis("GIRAUD-ALEDO MARC/SANDRINE, Transfert - Vitis")).toBe(false);
+    expect(estVersementVitis("DECOMPTE VISA AU 24/10/2026")).toBe(false);
+  });
+
+  it("propose le compte de retraite pour chaque versement (dépense uniquement)", () => {
+    const r = attribuerRetraite([
+      { cle: 0, date_operation: "2026-11-23", libelle: sa, montant: -4500 },
+      { cle: 1, date_operation: "2026-11-23", libelle: mg, montant: -4500 },
+      { cle: 2, date_operation: "2026-11-23", libelle: "AMAZON", montant: -20 },
+      { cle: 3, date_operation: "2026-11-24", libelle: sa, montant: 100 },
+    ], { id: 6, mouvements: [] });
+    expect(r.get(0)).toEqual({ carte_id: 6, deja_presente: false });
+    expect(r.get(1)).toEqual({ carte_id: 6, deja_presente: false });
+    expect(r.has(2)).toBe(false);
+    expect(r.has(3)).toBe(false);
+  });
+
+  it("repère un versement déjà reporté sur le compte de retraite", () => {
+    const r = attribuerRetraite(
+      [{ cle: 0, date_operation: "2026-11-23", libelle: sa, montant: -4500 }],
+      { id: 6, mouvements: [{ date_operation: "2026-11-23", libelle: sa, montant: 4500 }] },
+    );
+    expect(r.get(0)).toEqual({ carte_id: 6, deja_presente: true });
+  });
+
+  it("sans compte de retraite : rien n'est reporté", () => {
+    const r = attribuerRetraite([{ cle: 0, date_operation: "2026-11-23", libelle: sa, montant: -4500 }], null);
+    expect(r.get(0)).toEqual({ carte_id: null, deja_presente: false });
   });
 });

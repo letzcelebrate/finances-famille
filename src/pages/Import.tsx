@@ -4,7 +4,7 @@ import { ErreurImport, type FichierImport } from "../lib/import/raiffeisen";
 import { lireCsv } from "../lib/import/lecture";
 import { empreinte, separerNouvelles } from "../lib/import/empreinte";
 import { preparerClassement, type Proposition } from "../lib/import/classement";
-import { attribuerCartes } from "../lib/import/decomptes";
+import { attribuerCartes, attribuerRetraite, estVersementVitis } from "../lib/import/decomptes";
 import {
   ajouterRegle,
   chargerComptes,
@@ -35,7 +35,7 @@ type Ligne = {
   parts: Part[] | null; // division en plusieurs postes
   modifie: boolean;
   inclure: boolean;
-  // décompte Visa : carte sur laquelle ajouter la même somme en positif
+  // décompte Visa ou versement Vitis : carte / compte de retraite sur lequel ajouter la même somme en positif
   decompte: { carte_id: number | null; deja_presente: boolean } | null;
 };
 
@@ -112,6 +112,9 @@ export default function Import() {
   // cartes de la même banque, encore ouvertes (destinataires possibles d'un décompte Visa)
   const cartesDe = (compte: CompteImport) =>
     comptes.filter((c) => c.ouvert && c.type_compte === "Carte Bancaire" && c.banque === compte.banque);
+  // compte de retraite Vitis Life (destinataire des versements Vitis du compte courant)
+  const retraitesVitis = () =>
+    comptes.filter((c) => c.ouvert && c.type_compte === "Retraite" && /vitis/i.test(c.banque));
   const nomCompte = (id: number | null) => comptes.find((c) => c.id === id)?.nom ?? null;
   const nomPoste = (id: number | null) => postes.find((p) => p.id === id)?.nom ?? null;
   const majLigne = (cle: number, m: Partial<Ligne>) => setLignes((ls) => ls.map((x) => (x.cle === cle ? { ...x, ...m } : x)));
@@ -136,20 +139,29 @@ export default function Import() {
     setEtat("analyse");
     const depuis = fichier.lignes.map((l) => l.date_operation).sort()[0];
     const cartes = fichier.format === "raiffeisen_compte" ? cartesDe(compte) : [];
+    const retraite = fichier.format === "raiffeisen_compte" ? retraitesVitis()[0] ?? null : null;
     const [existantes, historique, regles, solde, mouvementsCartes] = await Promise.all([
       chargerExistantes(compte.id, depuis),
       chargerHistorique(),
       chargerRegles(),
       soldeCompte(compte.id),
-      chargerMouvementsCartes(cartes.map((c) => c.id)),
+      chargerMouvementsCartes([...cartes.map((c) => c.id), ...(retraite ? [retraite.id] : [])]),
     ]);
     const chrono = [...fichier.lignes].sort((a, b) => a.date_operation.localeCompare(b.date_operation));
     const { presentes, nouvelles } = separerNouvelles(chrono, existantes);
     const proposer = preparerClassement(historique, regles);
+    const aReporter = nouvelles.map((l, i) => ({ cle: i, date_operation: l.date_operation, libelle: l.libelle, montant: l.montant }));
     const attributions = attribuerCartes(
-      nouvelles.map((l, i) => ({ cle: i, date_operation: l.date_operation, libelle: l.libelle, montant: l.montant })),
+      aReporter,
       cartes.map((c) => ({ id: c.id, mouvements: mouvementsCartes.filter((m) => m.compte_id === c.id) })),
     );
+    if (fichier.format === "raiffeisen_compte") {
+      const versements = attribuerRetraite(
+        aReporter,
+        retraite ? { id: retraite.id, mouvements: mouvementsCartes.filter((m) => m.compte_id === retraite.id) } : null,
+      );
+      versements.forEach((a, cle) => attributions.set(cle, a));
+    }
     setLignes(
       nouvelles.map((l, i) => {
         const p = proposer(l.libelle);
@@ -224,7 +236,7 @@ export default function Import() {
       setResultat(
         `${aEnvoyer.length} opération(s) importée(s) sur ${analyse.compte.banque} — ${analyse.compte.nom}.` +
         (contreparties.length > 0
-          ? ` Décompte(s) Visa reporté(s) en positif : ${contreparties.map((l) => `${nomCompte(l.decompte!.carte_id)} ${formatMontant(-l.montant)}`).join(", ")}.`
+          ? ` Report(s) en positif (décomptes Visa, versements Vitis) : ${contreparties.map((l) => `${nomCompte(l.decompte!.carte_id)} ${formatMontant(-l.montant)}`).join(", ")}.`
           : ""),
       );
       setEtat("fini");
@@ -529,12 +541,13 @@ export default function Import() {
                                 <>✓ déjà reporté en positif sur {nomCompte(l.decompte.carte_id)}</>
                               ) : (
                                 <>
-                                  Reporter {formatMontant(-l.montant)} en positif sur la carte :{" "}
+                                  Reporter {formatMontant(-l.montant)} en positif sur {estVersementVitis(l.libelle) ? "le compte" : "la carte"} :{" "}
                                   <select value={l.decompte.carte_id ?? ""}
                                     onChange={(e) => majLigne(l.cle, {
                                       decompte: { carte_id: e.target.value === "" ? null : Number(e.target.value), deja_presente: false },
                                     })}>
-                                    {cartesDe(analyse.compte!).map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                                    {(estVersementVitis(l.libelle) ? retraitesVitis() : cartesDe(analyse.compte!))
+                                      .map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
                                     <option value="">— ne pas reporter —</option>
                                   </select>
                                 </>

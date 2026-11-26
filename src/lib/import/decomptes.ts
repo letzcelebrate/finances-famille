@@ -82,3 +82,34 @@ export function attribuerCartes(decomptes: Decompte[], cartes: CarteDecompte[]):
   }
   return res;
 }
+
+/**
+ * Versements Vitis Life : un virement du compte courant vers un contrat de
+ * retraite Vitis Life (libellé « Vitis Life, LU…, <titulaire>, Contrat … »)
+ * doit être ajouté en positif sur le compte de retraite Vitis.
+ */
+const RE_VITIS = /^\s*VITIS\s+LIFE\b.*\bCONTRAT\b/i;
+
+export function estVersementVitis(libelle: string): boolean {
+  return RE_VITIS.test(libelle ?? "");
+}
+
+/**
+ * Propose le compte de retraite pour chaque versement Vitis (clé → attribution).
+ * Si le compte contient déjà la ligne positive (même date, montant, libellé) :
+ * rien à ajouter (deja_presente).
+ */
+export function attribuerRetraite(lignes: Decompte[], retraite: CarteDecompte | null): Map<number, Attribution> {
+  const res = new Map<number, Attribution>();
+  for (const l of lignes) {
+    if (!estVersementVitis(l.libelle) || l.montant >= 0) continue;
+    if (!retraite) {
+      res.set(l.cle, { carte_id: null, deja_presente: false });
+      continue;
+    }
+    const deja = retraite.mouvements.some((m) => m.date_operation === l.date_operation
+      && arrondi(m.montant) === arrondi(-l.montant) && compact(m.libelle) === compact(l.libelle));
+    res.set(l.cle, { carte_id: retraite.id, deja_presente: deja });
+  }
+  return res;
+}
