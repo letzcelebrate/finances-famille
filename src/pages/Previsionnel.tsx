@@ -93,6 +93,8 @@ export default function Previsionnel() {
   const [envoi, setEnvoi] = useState(false);
   const [infoOuverte, setInfoOuverte] = useState(false);
   const [vueMontant, setVueMontant] = useState<"mensuel" | "annuel">("mensuel");
+  // « + LetzCelebrate » : intègre les opérations des comptes LetzCelebrate (désactivé à l'ouverture)
+  const [avecLetzCelebrate, setAvecLetzCelebrate] = useState(false);
   const [cible, setCible] = useState<{ posteId: number; nom: string; moisLabel: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -109,11 +111,12 @@ export default function Previsionnel() {
       const annees = [...new Set(tous.map((m) => m.annee))].sort((a, b) => a - b);
       const premier = affichables.reduce((a, b) => (rang(b) < rang(a) ? b : a));
       const dernier = affichables.reduce((a, b) => (rang(b) > rang(a) ? b : a));
+      const p_groupes = avecLetzCelebrate ? ["Famille", "LetzCelebrate"] : ["Famille"];
       const [bilans, hn, hp, ob] = await Promise.all([
-        Promise.all(annees.map((a) => supabase.rpc("bilan_par_mois", { p_annee: a }))),
-        supabase.rpc("historique_postes", { p_debut: iso(premier), p_fin: iso(decaler(dernier, 1)) }),
+        Promise.all(annees.map((a) => supabase.rpc("bilan_par_mois", { p_annee: a, p_groupes }))),
+        supabase.rpc("historique_postes", { p_debut: iso(premier), p_fin: iso(decaler(dernier, 1)), p_groupes }),
         // 24 mois terminés avant le mois en cours, pour les suggestions
-        supabase.rpc("historique_postes", { p_debut: iso(decaler(ref, -24)), p_fin: iso(ref) }),
+        supabase.rpc("historique_postes", { p_debut: iso(decaler(ref, -24)), p_fin: iso(ref), p_groupes }),
         supabase.from("objectifs").select("poste_id, mode, montant, nb_operations, mois"),
       ]);
       if (annule) return;
@@ -142,7 +145,7 @@ export default function Previsionnel() {
     return () => {
       annule = true;
     };
-  }, [version]);
+  }, [version, avecLetzCelebrate]);
 
   const calcul = useMemo(() => {
     if (!donnees || postes.length === 0) return null;
@@ -412,6 +415,13 @@ export default function Previsionnel() {
           <input type="checkbox" checked={toutOuvert} onChange={(e) => setOuvertes(new Set(e.target.checked ? toutes : []))} />
           Afficher le détail des postes
         </label>
+        <span className="bascule">
+          <button type="button" className={avecLetzCelebrate ? "actif" : ""} aria-pressed={avecLetzCelebrate}
+            title="Intégrer les dépenses et rentrées des comptes LetzCelebrate"
+            onClick={() => setAvecLetzCelebrate((v) => !v)}>
+            + LetzCelebrate
+          </button>
+        </span>
         <button type="button" className="info-bouton" aria-expanded={infoOuverte} aria-label="Informations sur le tableau"
           onClick={() => setInfoOuverte((v) => !v)}>i</button>
       </div>
