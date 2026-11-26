@@ -400,10 +400,6 @@ export default function Previsionnel() {
             Année civile {donnees.jour.getFullYear()}
           </button>
         </span>
-        <label className="case">
-          <input type="checkbox" checked={toutOuvert} onChange={(e) => setOuvertes(new Set(e.target.checked ? toutes : []))} />
-          Afficher le détail des postes
-        </label>
         <span className="bascule" role="group" aria-label="Montants de la synthèse">
           <button type="button" className={parMois ? "actif" : ""} aria-pressed={parMois} onClick={() => setVueMontant("mensuel")}>
             Mensuel
@@ -412,6 +408,10 @@ export default function Previsionnel() {
             Annuel
           </button>
         </span>
+        <label className="case">
+          <input type="checkbox" checked={toutOuvert} onChange={(e) => setOuvertes(new Set(e.target.checked ? toutes : []))} />
+          Afficher le détail des postes
+        </label>
         <button type="button" className="info-bouton" aria-expanded={infoOuverte} aria-label="Informations sur le tableau"
           onClick={() => setInfoOuverte((v) => !v)}>i</button>
       </div>
