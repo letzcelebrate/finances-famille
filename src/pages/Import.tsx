@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { motifPropose } from "../lib/import/classement";
 import { formatDate, formatMontant } from "../lib/format";
 import { ErreurImport, type FichierImport } from "../lib/import/raiffeisen";
 import { lireCsv } from "../lib/import/lecture";
@@ -60,6 +61,14 @@ export default function Import() {
   const [memoriser, setMemoriser] = useState(true);
   const [resultat, setResultat] = useState<string | null>(null);
   const [regleEnCours, setRegleEnCours] = useState<{ motif: string; poste_id: number | null; a_confirmer: boolean } | null>(null);
+  // Le formulaire de règle s'affiche au-dessus du tableau : on l'amène à l'écran à l'ouverture
+  const panneauRegle = useRef<HTMLDivElement>(null);
+  const regleOuverte = regleEnCours !== null;
+  useEffect(() => {
+    if (!regleOuverte || !panneauRegle.current) return;
+    panneauRegle.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    panneauRegle.current.querySelector("input")?.focus({ preventScroll: true });
+  }, [regleOuverte]);
   const aujourdhui = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -476,7 +485,7 @@ export default function Import() {
           </div>
 
           {regleEnCours && (
-            <div className="carte">
+            <div className="carte" ref={panneauRegle}>
               <h2>Nouvelle règle de classement</h2>
               <div className="filtres">
                 <label>
@@ -580,7 +589,7 @@ export default function Import() {
                                 </button>
                                 {" · "}
                                 <button className="lien petit" onClick={() =>
-                                  setRegleEnCours({ motif: l.libelle.split(",")[0].trim(), poste_id: l.poste_id, a_confirmer: false })}>
+                                  setRegleEnCours({ motif: motifPropose(l.libelle), poste_id: l.poste_id, a_confirmer: false })}>
                                   créer une règle
                                 </button>
                               </div>

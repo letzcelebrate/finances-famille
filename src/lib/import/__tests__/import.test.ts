@@ -89,3 +89,13 @@ describe("classement automatique", () => {
     expect(preparerClassement([h("CCSS, x", 5)])("ZZZ INCONNU, 1")).toMatchObject({ poste_id: null, certitude: "aucune" });
   });
 });
+
+describe("motifPropose", () => {
+  it("prend le début du libellé sans les chiffres finaux", async () => {
+    const { motifPropose } = await import("../classement");
+    expect(motifPropose("INTERETS DEBITEURS: 0,03 EUR 10,7500% 15/06/2026")).toBe("INTERETS DEBITEURS");
+    expect(motifPropose("GIRAUD-ALEDO MARC/SANDRINE, 15, RUE HENRI")).toBe("GIRAUD-ALEDO MARC/SANDRINE");
+    expect(motifPropose("AMAZON")).toBe("AMAZON");
+    expect(motifPropose("123")).toBe("123");
+  });
+});

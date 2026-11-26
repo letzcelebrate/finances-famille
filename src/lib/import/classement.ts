@@ -145,3 +145,10 @@ export function preparerClassement(historique: Historique[], regles: Regle[] = [
     return { poste_id: null, certitude: "aucune", raison: "aucune opération semblable" };
   };
 }
+
+/** Début du libellé proposé pour une règle : jusqu'à la première virgule, sans chiffres finaux
+ *  (ex. « INTERETS DEBITEURS: 0,03 EUR … » → « INTERETS DEBITEURS »). */
+export function motifPropose(libelle: string): string {
+  const debut = libelle.split(",")[0].trim();
+  return debut.replace(/[\s:;.\-\d]+$/, "").trim() || debut;
+}
